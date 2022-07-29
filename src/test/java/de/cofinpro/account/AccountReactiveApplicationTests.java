@@ -12,7 +12,6 @@ import org.springframework.web.reactive.function.BodyInserters;
 
 import static org.hamcrest.CoreMatchers.is;
 
-
 @SpringBootTest
 @AutoConfigureWebTestClient
 class AccountReactiveApplicationTests {
@@ -35,7 +34,6 @@ class AccountReactiveApplicationTests {
                 .expectStatus().isUnauthorized();
     }
 
-
     @Test
     void whenSignup_ThenOkReturned() {
         webClient.post().uri("/api/auth/signup")
@@ -43,5 +41,14 @@ class AccountReactiveApplicationTests {
                 .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@a.de", "secret")))
                 .exchange()
                 .expectStatus().isOk();
+    }
+
+    @Test
+    void whenInvalidSignup_Then400Returned() {
+        webClient.post().uri("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(BodyInserters.fromValue(new SignupRequest("Müller", "", "j.m@a.de", "secret")))
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 }

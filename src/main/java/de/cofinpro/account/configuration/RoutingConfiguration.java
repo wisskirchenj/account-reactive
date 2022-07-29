@@ -1,8 +1,8 @@
 package de.cofinpro.account.configuration;
 
-import de.cofinpro.account.handler.AccountHandler;
+import de.cofinpro.account.domain.AccountHandler;
 import de.cofinpro.account.authentication.AuthenticationHandler;
-import de.cofinpro.account.handler.AdminHandler;
+import de.cofinpro.account.admin.AdminHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,7 +20,7 @@ public class RoutingConfiguration {
                                                  AccountHandler accountHandler,
                                                  AdminHandler adminHandler) {
         return route().add(authenticationRoutes(authenticationHandler))
-                //.add(accountRoutes(accountHandler))
+                .add(accountRoutes(accountHandler))
                 //.add(adminRoutes(adminHandler))
                 .build();
     }
@@ -39,6 +39,7 @@ public class RoutingConfiguration {
 
     private RouterFunction<ServerResponse> accountRoutes(AccountHandler accountHandler) {
         return route()
+                .GET("/api/empl/payment", accountHandler::accessPayrolls)
                 .build();
     }
 }

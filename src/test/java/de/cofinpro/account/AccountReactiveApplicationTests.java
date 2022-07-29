@@ -6,8 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
+
+import static org.hamcrest.CoreMatchers.is;
 
 
 @SpringBootTest
@@ -18,11 +21,20 @@ class AccountReactiveApplicationTests {
     WebTestClient webClient;
 
     @Test
-    void whenInvalidPath_ThenNotFoundReturned() {
-        webClient.get().uri("/invalid")
+    @WithMockUser
+    void whenChangepassAuthenticated_ThenOkReturned() {
+        webClient.post().uri("/api/auth/changepass")
                 .exchange()
-                .expectStatus().isNotFound();
+                .expectStatus().isOk();
     }
+
+    @Test
+    void whenChangepassUnauthenticated_Then401Returned() {
+        webClient.post().uri("/api/auth/changepass")
+                .exchange()
+                .expectStatus().isUnauthorized();
+    }
+
 
     @Test
     void whenSignup_ThenOkReturned() {
@@ -30,7 +42,6 @@ class AccountReactiveApplicationTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@a.de", "secret")))
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody();
+                .expectStatus().isOk();
     }
 }

@@ -27,12 +27,12 @@ class AccountReactiveApplicationTests {
     @Autowired
     WebTestClient webClient;
 
-    private static final Path TEST_DB_PATH = Path.of("src/test/resources/data/test_db.mv.db");
+    private static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/test_db.mv.db");
 
     @BeforeAll
     static void dbsetup() throws IOException {
         Files.deleteIfExists(TEST_DB_PATH);
-        Files.copy(Path.of("src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
+        Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
     }
 
     @Test

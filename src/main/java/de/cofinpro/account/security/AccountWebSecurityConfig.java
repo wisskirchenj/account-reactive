@@ -21,10 +21,8 @@ public class AccountWebSecurityConfig {
         http.csrf().disable()
                 .httpBasic(httpBasicSpec -> httpBasicSpec
                         .authenticationEntryPoint((exchange, ex) ->
-                                Mono.fromRunnable(() -> {
-                                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "");
-                                }))
-                )
+                                Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, ""))
+                ))
                 .authorizeExchange()
                 .pathMatchers(HttpMethod.POST,"/api/auth/signup").permitAll()
                 .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()

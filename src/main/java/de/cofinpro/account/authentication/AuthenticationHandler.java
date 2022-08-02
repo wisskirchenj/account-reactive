@@ -1,9 +1,9 @@
 package de.cofinpro.account.authentication;
 
+import de.cofinpro.account.persistence.Login;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -35,24 +35,31 @@ public class AuthenticationHandler {
 
     public Mono<ServerResponse> signup(ServerRequest request) {
         return request.bodyToMono(SignupRequest.class)
-                .doOnSuccess(this::validateAndSave)
-                .flatMap(req -> ServerResponse.ok().contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(req.toResponse()));
+                .flatMap(req -> ServerResponse.ok().body(validateAndSave(req), SignupResponse.class));
     }
+
     public Mono<ServerResponse> changePassword(ServerRequest ignoredServerRequest) {
         return ok().build();
     }
 
-    private void saveUser(SignupRequest signupRequest) {
-        //
+    private Mono<SignupResponse> saveUser(SignupRequest signupRequest) {
+        return userRepository.findByEmail(signupRequest.email())
+                .defaultIfEmpty(Login.unknown())
+                .flatMap(userDetails -> {
+                    if (((Login) userDetails).isUnknown()) {
+                        return userRepository.save(Login.fromSignupRequest(signupRequest, passwordEncoder.encode(signupRequest.password())))
+                                .map(Login::toSignupResponse);
+                    } else {
+                        return Mono.error(new ServerWebInputException("User exists!"));
+                    }});
     }
 
-    private void validateAndSave(SignupRequest signupRequest) {
+    private Mono<SignupResponse> validateAndSave(SignupRequest signupRequest) {
         Errors errors = new BeanPropertyBindingResult(signupRequest, SignupRequest.class.getName());
         validator.validate(signupRequest, errors);
         if (errors.hasErrors()) {
-            throw new ServerWebInputException(errors.getAllErrors().toString());
+            return Mono.error(new ServerWebInputException(errors.getAllErrors().toString()));
         }
-        saveUser(signupRequest);
+        return saveUser(signupRequest);
     }
 }

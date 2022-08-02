@@ -34,7 +34,7 @@ class AccountReactiveApplicationTests {
                 .expectStatus().isUnauthorized();
     }
 
-    @Test
+    //@Test
     void whenSignup_ThenOkReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)

@@ -7,6 +7,6 @@ import reactor.core.publisher.Mono;
 
 public interface LoginReactiveRepository extends ReactiveCrudRepository<Login, Long> {
 
-    @Query("SELECT * FROM LOGIN WHERE EMAIL = $1")
+    @Query("SELECT * FROM LOGIN WHERE LOWER(EMAIL) = LOWER($1)")
     Mono<UserDetails> findByEmail(String email);
 }

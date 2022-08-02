@@ -19,7 +19,7 @@ public class AccountHandler {
     public Mono<ServerResponse> accessPayrolls(ServerRequest request) {
         return request.principal()
                 .flatMap(principal -> ServerResponse.ok()
-                        .body(userRepository.findByEmail(principal.getName()).map(Login::toResponse),
+                        .body(userRepository.findByEmail(principal.getName()).map(Login::createEmployeeResponse),
                                 EmployeeResponse.class));
     }
 }

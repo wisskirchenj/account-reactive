@@ -18,6 +18,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Entity class connected to R2DBC-Table LOGIN, that implements the UserDetails interface of Spring Security.
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -38,11 +41,20 @@ public class Login implements UserDetails {
     @Transient
     private List<String> roles = new ArrayList<>();
 
+    /**
+     * factory method from request and encrypted password.
+     * @return entity instance with given data
+     */
     public static Login fromSignupRequest(SignupRequest request, String encryptedPassword) {
         return Login.builder().name(request.name()).lastname(request.lastname()).email(request.email())
                 .password(encryptedPassword).build();
     }
 
+    /**
+     * create an EmployeeResponse from a data base retrieved login user
+     * @param userDetails user details found via principal's name
+     * @return newly created response object
+     */
     public static EmployeeResponse createEmployeeResponse(UserDetails userDetails) {
         Login user = (Login) userDetails;
         return new EmployeeResponse(user.id, user.name, user.lastname, user.email);
@@ -78,14 +90,25 @@ public class Login implements UserDetails {
         return true;
     }
 
+    /**
+     * map a saved Login entity into an appropriate response for the signup
+     */
     public SignupResponse toSignupResponse() {
         return new SignupResponse(id, name, lastname, email);
     }
 
+    /**
+     * return the static UNKNOWN Login instance - used in the save process as async Mono body.
+     * @return the "unknown"-tagged Login instance
+     */
     public static Login unknown() {
         return UNKNOWN;
     }
 
+    /**
+     * checker method, if a Login ionstance is "unknown".
+     * @return true iff it is unknown.
+     */
     public boolean isUnknown() {
         return id == -1;
     }

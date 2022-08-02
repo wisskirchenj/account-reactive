@@ -33,14 +33,15 @@ class AuthenticationHandlerValidatorUnitTest {
 
     static Stream<Arguments> signupInvalidRequests() {
         return Stream.of(
-                Arguments.of(new SignupRequest("", "Seeler", "t.s@xy.de", "123456")),
-                Arguments.of(new SignupRequest(null, "Seeler", "t.s@xy.de", "123456")),
-                Arguments.of(new SignupRequest("Toni", "", "t.s@xy.de", "123456")),
-                Arguments.of(new SignupRequest("Toni", null, "t.s@xy.de", "123456")),
-                Arguments.of(new SignupRequest("Toni", "Seeler", "", "123456")),
+                Arguments.of(new SignupRequest("", "Seeler", "t.s@acme.com", "123456")),
+                Arguments.of(new SignupRequest(null, "Seeler", "t.s@acme.com", "123456")),
+                Arguments.of(new SignupRequest("Toni", "", "t.s@acme.com", "123456")),
+                Arguments.of(new SignupRequest("Toni", null, "t.s@acme.com", "123456")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", null, "123456")),
-                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@xy.de", "")),
-                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@xy.de", null))
+                Arguments.of(new SignupRequest("Toni", "Seeler", "juergen.wisskirchen@acme.de", "123456")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "juergen.wisskirchen@cofinpro.com", "123456")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.com", "")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.com", null))
         );
     }
 }

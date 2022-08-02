@@ -11,6 +11,9 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import static org.springframework.web.reactive.function.server.RouterFunctions.route;
 
+/**
+ * routing configuration (webflux.fn) defining the route-handler methods for all andpoints of account-reactive
+ */
 @Configuration
 public class RoutingConfiguration {
 
@@ -25,6 +28,10 @@ public class RoutingConfiguration {
                 .build();
     }
 
+    /**
+     * route handling for the authentication specific routes
+     * @param authenticationHandler handler
+     */
     private RouterFunction<ServerResponse> authenticationRoutes(AuthenticationHandler authenticationHandler) {
         return route()
                 .POST("/api/auth/signup", authenticationHandler::signup)
@@ -37,6 +44,10 @@ public class RoutingConfiguration {
                 .build();
     }
 
+    /**
+     * route handling for all domain (account / payroll) specific routes
+     * @param accountHandler handler
+     */
     private RouterFunction<ServerResponse> accountRoutes(AccountHandler accountHandler) {
         return route()
                 .GET("/api/empl/payment", accountHandler::accessPayrolls)

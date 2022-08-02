@@ -16,6 +16,9 @@ import org.springframework.validation.Validator;
 
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
+/**
+ * service layer class, that handles the authentication routes /api/auth/*, i.e. signup and changepass.
+ */
 @Service
 @Slf4j
 public class AuthenticationHandler {
@@ -33,6 +36,12 @@ public class AuthenticationHandler {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * controller entry point (routing handler) for route /api/auth/signup.
+     * request is validated and saved, if the user (email given) does not exist yet.
+     * @param request The ServerRequest with a SignupRequest body.
+     * @return a SignupResponse Json (200) as body of a ServerResponse or a 400 if validation error or user exists already
+     */
     public Mono<ServerResponse> signup(ServerRequest request) {
         return request.bodyToMono(SignupRequest.class)
                 .flatMap(req -> ServerResponse.ok().body(validateAndSave(req), SignupResponse.class));
@@ -42,18 +51,32 @@ public class AuthenticationHandler {
         return ok().build();
     }
 
+    /**
+     * save method called after successful validation of the signu request.
+     * checks if the given request email already exists as user in the database. If so, an error is returned (400)
+     * or else the user is saved to the data base
+     * @param signupRequest already validated signup request data
+     * @return a signup response mono on successful save, an error mono if user existed.
+     */
     private Mono<SignupResponse> saveUser(SignupRequest signupRequest) {
         return userRepository.findByEmail(signupRequest.email())
                 .defaultIfEmpty(Login.unknown())
                 .flatMap(userDetails -> {
                     if (((Login) userDetails).isUnknown()) {
-                        return userRepository.save(Login.fromSignupRequest(signupRequest, passwordEncoder.encode(signupRequest.password())))
+                        return userRepository
+                                .save(Login.fromSignupRequest(signupRequest,
+                                        passwordEncoder.encode(signupRequest.password())))
                                 .map(Login::toSignupResponse);
                     } else {
                         return Mono.error(new ServerWebInputException("User exists!"));
                     }});
     }
 
+    /**
+     * hibernate validated
+     * @param signupRequest request data to validate and save
+     * @return a signup response as Mono if new user saved, error Mono else.
+     */
     private Mono<SignupResponse> validateAndSave(SignupRequest signupRequest) {
         Errors errors = new BeanPropertyBindingResult(signupRequest, SignupRequest.class.getName());
         validator.validate(signupRequest, errors);

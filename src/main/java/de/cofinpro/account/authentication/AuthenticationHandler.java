@@ -52,6 +52,20 @@ public class AuthenticationHandler {
     }
 
     /**
+     * hibernate validated
+     * @param signupRequest request data to validate and save
+     * @return a signup response as Mono if new user saved, error Mono else.
+     */
+    private Mono<SignupResponse> validateAndSave(SignupRequest signupRequest) {
+        Errors errors = new BeanPropertyBindingResult(signupRequest, SignupRequest.class.getName());
+        validator.validate(signupRequest, errors);
+        if (errors.hasErrors()) {
+            return Mono.error(new ServerWebInputException(errors.getAllErrors().toString()));
+        }
+        return saveUser(signupRequest);
+    }
+
+    /**
      * save method called after successful validation of the signu request.
      * checks if the given request email already exists as user in the database. If so, an error is returned (400)
      * or else the user is saved to the data base
@@ -70,19 +84,5 @@ public class AuthenticationHandler {
                     } else {
                         return Mono.error(new ServerWebInputException("User exists!"));
                     }});
-    }
-
-    /**
-     * hibernate validated
-     * @param signupRequest request data to validate and save
-     * @return a signup response as Mono if new user saved, error Mono else.
-     */
-    private Mono<SignupResponse> validateAndSave(SignupRequest signupRequest) {
-        Errors errors = new BeanPropertyBindingResult(signupRequest, SignupRequest.class.getName());
-        validator.validate(signupRequest, errors);
-        if (errors.hasErrors()) {
-            return Mono.error(new ServerWebInputException(errors.getAllErrors().toString()));
-        }
-        return saveUser(signupRequest);
     }
 }

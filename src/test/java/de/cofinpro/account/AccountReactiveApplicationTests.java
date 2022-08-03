@@ -98,6 +98,8 @@ class AccountReactiveApplicationTests {
                 .expectStatus().isOk()
                 .expectBody(EmployeeResponse.class)
                 .value(response -> assertTrue(response.id() > 0))
+                .value(EmployeeResponse::name, equalTo("Hans"))
+                .value(EmployeeResponse::lastname, equalTo("Schmitz"))
                 .value(EmployeeResponse::email, equalTo("h.schmitz@acme.com"));
     }
 }

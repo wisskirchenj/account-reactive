@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -54,7 +54,7 @@ class AccountReactiveApplicationTests {
     void whenSignup_ThenOkAndResponseReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@acme.com", "secret")))
+                .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@acme.COM", "secret")))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(SignupResponse.class)

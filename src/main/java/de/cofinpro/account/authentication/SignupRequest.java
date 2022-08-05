@@ -11,6 +11,6 @@ import javax.validation.constraints.Pattern;
  * @param password not empty
  */
 public record SignupRequest(@NotEmpty String name, @NotEmpty String lastname,
-                            @NotEmpty @Pattern(regexp ="\\w+(\\.\\w+){0,2}@acme.com") String email,
+                            @NotEmpty @Pattern(regexp ="\\w+(\\.\\w+){0,2}@[aA][Cc][Mm][Ee].[Cc][Oo][Mm]") String email,
                             @NotEmpty String password) {
 }

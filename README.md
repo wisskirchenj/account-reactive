@@ -49,3 +49,6 @@ Sources for all project tasks (7 stages) with tests and configurations.
 01.08.22 Stage 2 completed - setup of WebFluxSecurity, R2DBC-data base connected and initialized via scripts using
 Spring properties, signup data are saved, authenticated endpoints (all but signup).
 
+06.08.22 Stage 3 completed - custom authentication manager to include breached passwords check in login authentication,
+change password functionality, Mono-zipWith and Tuple2 used..
+

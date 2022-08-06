@@ -13,6 +13,9 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 import org.springframework.validation.Validator;
+import reactor.util.function.Tuple2;
+
+import java.security.Principal;
 
 import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
@@ -45,11 +48,43 @@ public class AuthenticationHandler {
      */
     public Mono<ServerResponse> signup(ServerRequest request) {
         return request.bodyToMono(SignupRequest.class)
-                .flatMap(req -> ServerResponse.ok().body(validateAndSave(req), SignupResponse.class));
+                .flatMap(req -> ok().body(validateAndSave(req), SignupResponse.class));
     }
 
-    public Mono<ServerResponse> changePassword(ServerRequest ignoredServerRequest) {
-        return ok().build();
+    /**
+     * controller entry point (routing handler) for the authenticated route /api/auth/changepass.
+     * request body containing new password is zipped with principal and validated for password update.
+     * @param request The ServerRequest with a ChangepassRequest body.
+     * @return a ChangepassResponse Json (200) as body of a ServerResponse or a 400 if validation error or same password
+     */
+    public Mono<ServerResponse> changePassword(ServerRequest request) {
+        return request.bodyToMono(ChangepassRequest.class)
+                .zipWith(request.principal())
+                .flatMap(tuple -> ok().body(validateAndChangepass(tuple), ChangepassResponse.class));
+    }
+
+    /**
+     * validates the password (length and not breached) and checks if it differs from last password.
+     * If so, the Login-entity to this user is updated ad saved to the database.
+     * @param tuple Tuple2 consisting of the ChangepassRequest and the user's principal
+     * @return ChangepassResponse if password is updated or informative 400 error Mono
+     */
+    private Mono<ChangepassResponse> validateAndChangepass(Tuple2<ChangepassRequest, ? extends Principal> tuple) {
+        final String newPassword = tuple.getT1().newPassword();
+        String passwordValidationError = validatePassword(newPassword);
+        if (!passwordValidationError.isEmpty()) {
+            return Mono.error(new ServerWebInputException(passwordValidationError));
+        }
+        return userRepository.findByEmail(tuple.getT2().getName())
+                .flatMap(userDetails -> {
+                    if (passwordEncoder.matches(newPassword, userDetails.getPassword())) {
+                        return Mono.error(new ServerWebInputException(SAME_PASSWORD_ERRORMSG));
+                    } else {
+                        ((Login) userDetails).setPassword(passwordEncoder.encode(newPassword));
+                        return userRepository
+                                .save((Login) userDetails)
+                                .map(login -> new ChangepassResponse(login.getEmail(), PASSWORD_UPDATEMSG));
+                    }});
     }
 
     /**
@@ -76,19 +111,22 @@ public class AuthenticationHandler {
      * @return empty String for valid password, informative error message else.
      */
     private String validatePassword(String password) {
+        if (password == null) {
+            return PASSWORD_TOO_SHORT_ERRORMSG;
+        }
         if (password.length() < MIN_PASSWORD_LENGTH) {
-            return PASSWORT_TOO_SHORT_ERRORMSG;
+            return PASSWORD_TOO_SHORT_ERRORMSG;
         }
         if (passwordIsHacked(password)) {
-            return PASSWORT_HACKED_ERRORMSG;
+            return PASSWORD_HACKED_ERRORMSG;
         }
         return "";
     }
 
     /**
-     * save method called after successful validation of the signu request.
+     * save method called after successful validation of the signup request.
      * checks if the given request email already exists as user in the database. If so, an error is returned (400)
-     * or else the user is saved to the data base
+     * or else the user is saved to the database
      * @param signupRequest already validated signup request data
      * @return a signup response mono on successful save, an error mono if user existed.
      */

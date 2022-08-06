@@ -18,9 +18,9 @@ import reactor.core.publisher.Mono;
 
 /**
  * Spring WebFlux security configuration, that sets up the Security WebFilterChain with access information to
- * the endpoints, Http-Basic authentication error handling and CSRF disabling.
- * Further, beans provide the ReactiveUserDetailsService and a delegating PasswordEncoder for use in the authentication
- * service.
+ * the endpoints, Http-Basic authentication manager and error handling and CSRF disabling.
+ * Further, beans provide the ReactiveUserDetailsService and a BcryptPasswordEncoder for use in the authentication
+ * manager.
  */
 @EnableWebFluxSecurity
 public class AccountWebSecurityConfig {

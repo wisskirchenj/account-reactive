@@ -9,7 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORT_HACKED_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_HACKED_ERRORMSG;
 import static de.cofinpro.account.configuration.AuthenticationConfiguration.passwordIsHacked;
 
 /**
@@ -35,7 +35,7 @@ public class AccountReactiveAuthenticationManager extends UserDetailsRepositoryR
     @Override
     public Mono<Authentication> authenticate(Authentication authentication) {
         if (passwordIsHacked((String) authentication.getCredentials())) {
-            return Mono.error(new BadCredentialsException(PASSWORT_HACKED_ERRORMSG + " Please change!"));
+            return Mono.error(new BadCredentialsException(PASSWORD_HACKED_ERRORMSG + " Please change!"));
         }
         return super.authenticate(authentication);
     }

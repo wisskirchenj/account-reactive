@@ -111,10 +111,7 @@ public class AuthenticationHandler {
      * @return empty String for valid password, informative error message else.
      */
     private String validatePassword(String password) {
-        if (password == null) {
-            return PASSWORD_TOO_SHORT_ERRORMSG;
-        }
-        if (password.length() < MIN_PASSWORD_LENGTH) {
+        if (password == null || password.length() < MIN_PASSWORD_LENGTH) {
             return PASSWORD_TOO_SHORT_ERRORMSG;
         }
         if (passwordIsHacked(password)) {

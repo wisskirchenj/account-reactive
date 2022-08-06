@@ -1,6 +1,5 @@
 package de.cofinpro.account.security;
 
-import de.cofinpro.account.configuration.AuthenticationConfiguration;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -15,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
+
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.BCRYPT_STRENGTH;
 
 /**
  * Spring WebFlux security configuration, that sets up the Security WebFilterChain with access information to
@@ -58,6 +59,6 @@ public class AccountWebSecurityConfig {
 
     @Bean
     public PasswordEncoder getEncoder() {
-        return new BCryptPasswordEncoder(AuthenticationConfiguration.BCRYPT_STRENGTH);
+        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 }

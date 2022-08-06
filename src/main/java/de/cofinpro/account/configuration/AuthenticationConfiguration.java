@@ -16,6 +16,7 @@ public class AuthenticationConfiguration {
 
     public static final String PASSWORD_TOO_SHORT_ERRORMSG = "The password length must be at least "
             + MIN_PASSWORD_LENGTH + " chars!";
+
     public static final String PASSWORD_HACKED_ERRORMSG = "The password is in the hacker's database!";
 
     public static final String SAME_PASSWORD_ERRORMSG = "The passwords must be different!";

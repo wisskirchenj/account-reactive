@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -39,25 +38,18 @@ class AccountReactiveApplicationTests {
     }
 
     @Test
-    @WithMockUser
-    void whenChangepassAuthenticated_ThenOkReturned() {
-        webClient.post().uri("/api/auth/changepass")
+    void whenGetPaymentUnauthenticated_Then401Returned() {
+        webClient.post().uri("/api/empl/payment")
                 .exchange()
-                .expectStatus().isOk();
-    }
-
-    @Test
-    void whenChangepassUnauthenticated_Then401Returned() {
-        webClient.post().uri("/api/auth/changepass")
-                .exchange()
-                .expectStatus().isUnauthorized();
+                .expectStatus().isUnauthorized()
+                .expectBody().json("{\"message\": \"Not Authenticated\"}");
     }
 
     @Test
     void whenSignup_ThenOkAndResponseReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@acme.COM", "secretsecret")))
+                .bodyValue(new SignupRequest("Müller", "John", "j.m@acme.COM", "secretsecret"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(SignupResponse.class)
@@ -68,7 +60,7 @@ class AccountReactiveApplicationTests {
     void whenInvalidSignup_Then400Returned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Müller", "", "j.m@a.de", "secret")))
+                .bodyValue(new SignupRequest("Müller", "", "j.m@a.de", "secret"))
                 .exchange()
                 .expectStatus().isBadRequest();
     }
@@ -77,22 +69,22 @@ class AccountReactiveApplicationTests {
     void whenSignupTwiceSameEmailIgnoreCase_ThenUserExistsReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret")))
+                .bodyValue(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret"))
                 .exchange()
                 .expectStatus().isOk();
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secretsecret")))
+                .bodyValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secretsecret"))
                 .exchange()
                 .expectStatus().isBadRequest()
-                .expectBody().json("{\"message\": \"User exist!\"}");
+                .expectBody().json("{\"message\": \""+ USER_EXISTS_ERRORMSG + "\"}");
     }
 
     @Test
     void whenSignedUpUserGetsPayment_ThenEmployeeResponseReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret")))
+                .bodyValue(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"))
                 .exchange()
                 .expectStatus().isOk();
         webClient.get().uri("/api/empl/payment")
@@ -107,10 +99,23 @@ class AccountReactiveApplicationTests {
     }
 
     @Test
+    void whenSignedUpUserGetsPaymentBadCredentials_Then401Returned() {
+        webClient.post().uri("/api/auth/signup")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(new SignupRequest("Ulrich", "Weiss", "uweiss@acme.com", "secretsecret"))
+                .exchange()
+                .expectStatus().isOk();
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("uweiss@acme.com", "secret_secret"))
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody().json("{\"message\": \"Invalid Credentials\"}");
+    }
+
+    @Test
     void stage3_example1() {
         webClient.post().uri("/api/auth/signup")
-                .body(BodyInserters.fromValue(new SignupRequest(
-                        "John", "Doe", "johnDoe@acme.com", "secret")))
+                .bodyValue(new SignupRequest("John", "Doe", "johnDoe@acme.com", "secret"))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -121,8 +126,7 @@ class AccountReactiveApplicationTests {
     @Test
     void stage3_example2() {
         webClient.post().uri("/api/auth/signup")
-                .body(BodyInserters.fromValue(new SignupRequest(
-                        "John", "Doe", "johnDoe@acme.com", "PasswordForJune")))
+                .bodyValue(new SignupRequest("John", "Doe", "johnDoe@acme.com", "PasswordForJune"))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -130,18 +134,31 @@ class AccountReactiveApplicationTests {
                         "\", \"path\": \"/api/auth/signup\"}");
     }
 
-
     @Test
-    void stage3_example3And4() {
+    void stage3_example3And4AndFurtherErrors() {
         webClient.post().uri("/api/auth/signup")
-                .body(BodyInserters.fromValue(new SignupRequest(
-                        "John", "Doe", "johnDoe@acme.com", "123456123456")))
+                .bodyValue(new SignupRequest("John", "Doe", "johnDoe@acme.com", "123456123456"))
                 .exchange()
                 .expectStatus().isOk();
         webClient.post().uri("/api/auth/changepass")
                 .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "123456123456"))
-                .body(BodyInserters.fromValue(new ChangepassRequest(
-                        "bZPGqH7fTJWW")))
+                .bodyValue(new ChangepassRequest("bZPGqH7fW"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .json("{\"error\": \"Bad Request\",\"message\": \"" + PASSWORD_TOO_SHORT_ERRORMSG +
+                        "\", \"path\": \"/api/auth/changepass\"}");
+        webClient.post().uri("/api/auth/changepass")
+                .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "123456123456"))
+                .bodyValue(new ChangepassRequest("PasswordForNovember"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .json("{\"error\": \"Bad Request\",\"message\": \"" + PASSWORD_HACKED_ERRORMSG +
+                        "\", \"path\": \"/api/auth/changepass\"}");
+        webClient.post().uri("/api/auth/changepass")
+                .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "123456123456"))
+                .bodyValue(new ChangepassRequest("bZPGqH7fTJWW"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(ChangepassResponse.class)
@@ -149,8 +166,7 @@ class AccountReactiveApplicationTests {
                 .value(ChangepassResponse::status, equalTo(PASSWORD_UPDATEMSG));
         webClient.post().uri("/api/auth/changepass")
                 .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "bZPGqH7fTJWW"))
-                .body(BodyInserters.fromValue(new ChangepassRequest(
-                        "bZPGqH7fTJWW")))
+                .body(BodyInserters.fromValue(new ChangepassRequest("bZPGqH7fTJWW")))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()

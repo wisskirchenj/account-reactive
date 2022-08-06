@@ -1,9 +1,12 @@
 package de.cofinpro.account.security;
 
+import de.cofinpro.account.configuration.AuthenticationConfiguration;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
@@ -16,19 +19,22 @@ import reactor.core.publisher.Mono;
 /**
  * Spring WebFlux security configuration, that sets up the Security WebFilterChain with access information to
  * the endpoints, Http-Basic authentication error handling and CSRF disabling.
- * Further beans provide the ReactiveUserDetailsService and a delegating PasswordEncoder for use in the authentication
+ * Further, beans provide the ReactiveUserDetailsService and a delegating PasswordEncoder for use in the authentication
  * service.
  */
 @EnableWebFluxSecurity
 public class AccountWebSecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
+    @Autowired
+    public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http,
+                                                            ReactiveAuthenticationManager authenticationManager) {
         http.csrf().disable()
                 .httpBasic(httpBasicSpec -> httpBasicSpec
                         .authenticationEntryPoint((exchange, ex) ->
-                                Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, ""))
-                ))
+                                Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage())))
+                        .authenticationManager(authenticationManager)
+                )
                 .authorizeExchange()
                 .pathMatchers(HttpMethod.POST,"/api/auth/signup").permitAll()
                 .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()
@@ -45,12 +51,13 @@ public class AccountWebSecurityConfig {
      * @return UserDetailsService instance (anonymous via method-reference).
      */
     @Bean
+    @Autowired
     public ReactiveUserDetailsService userDetailsService(LoginReactiveRepository users) {
         return users::findByEmail;
     }
 
     @Bean
     public PasswordEncoder getEncoder() {
-        return new BCryptPasswordEncoder(13);
+        return new BCryptPasswordEncoder(AuthenticationConfiguration.BCRYPT_STRENGTH);
     }
 }

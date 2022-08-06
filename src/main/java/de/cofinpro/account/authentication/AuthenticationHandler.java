@@ -14,6 +14,7 @@ import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 import org.springframework.validation.Validator;
 
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 /**
@@ -62,7 +63,26 @@ public class AuthenticationHandler {
         if (errors.hasErrors()) {
             return Mono.error(new ServerWebInputException(errors.getAllErrors().toString()));
         }
+        String passwordValidationError = validatePassword(signupRequest.password());
+        if (!passwordValidationError.isEmpty()) {
+            return Mono.error(new ServerWebInputException(passwordValidationError));
+        }
         return saveUser(signupRequest);
+    }
+
+    /**
+     * validates, if password has minimum length dnd is not hacked (i.e. found in a list of breached passwords)
+     * @param password the password to validate
+     * @return empty String for valid password, informative error message else.
+     */
+    private String validatePassword(String password) {
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            return PASSWORT_TOO_SHORT_ERRORMSG;
+        }
+        if (passwordIsHacked(password)) {
+            return PASSWORT_HACKED_ERRORMSG;
+        }
+        return "";
     }
 
     /**
@@ -82,7 +102,7 @@ public class AuthenticationHandler {
                                         passwordEncoder.encode(signupRequest.password())))
                                 .map(Login::toSignupResponse);
                     } else {
-                        return Mono.error(new ServerWebInputException("User exists!"));
+                        return Mono.error(new ServerWebInputException(USER_EXISTS_ERRORMSG));
                     }});
     }
 }

@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORT_HACKED_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORT_TOO_SHORT_ERRORMSG;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,7 +56,7 @@ class AccountReactiveApplicationTests {
     void whenSignup_ThenOkAndResponseReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@acme.COM", "secret")))
+                .body(BodyInserters.fromValue(new SignupRequest("Müller", "John", "j.m@acme.COM", "secretsecret")))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(SignupResponse.class)
@@ -74,26 +76,26 @@ class AccountReactiveApplicationTests {
     void whenSignupTwiceSameEmailIgnoreCase_ThenUserExistsReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Peter", "John", "p.john@acme.com", "secret")))
+                .body(BodyInserters.fromValue(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret")))
                 .exchange()
                 .expectStatus().isOk();
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secret")))
+                .body(BodyInserters.fromValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secretsecret")))
                 .exchange()
                 .expectStatus().isBadRequest()
-                .expectBody().json("{\"message\": \"User exists!\"}");
+                .expectBody().json("{\"message\": \"User exist!\"}");
     }
 
     @Test
     void whenSignedUpUserGetsPayment_ThenEmployeeResponseReturned() {
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(BodyInserters.fromValue(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secret")))
+                .body(BodyInserters.fromValue(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret")))
                 .exchange()
                 .expectStatus().isOk();
         webClient.get().uri("/api/empl/payment")
-                .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secret"))
+                .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secretsecret"))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(EmployeeResponse.class)
@@ -101,5 +103,42 @@ class AccountReactiveApplicationTests {
                 .value(EmployeeResponse::name, equalTo("Hans"))
                 .value(EmployeeResponse::lastname, equalTo("Schmitz"))
                 .value(EmployeeResponse::email, equalTo("h.schmitz@acme.com"));
+    }
+
+    @Test
+    void stage3_example1() {
+        webClient.post().uri("/api/auth/signup")
+                .body(BodyInserters.fromValue(new SignupRequest(
+                        "John", "Doe", "johnDoe@acme.com", "secret")))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .json("{\"error\": \"Bad Request\",\"message\": \"" + PASSWORT_TOO_SHORT_ERRORMSG +
+                        "\",\"path\": \"/api/auth/signup\"}");
+    }
+
+    @Test
+    void stage3_example2() {
+        webClient.post().uri("/api/auth/signup")
+                .body(BodyInserters.fromValue(new SignupRequest(
+                        "John", "Doe", "johnDoe@acme.com", "PasswordForJune")))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .json("{\"error\": \"Bad Request\",\"message\": \"" + PASSWORT_HACKED_ERRORMSG +
+                        "\", \"path\": \"/api/auth/signup\"}");
+    }
+
+
+    @Test
+    void stage3_example3() {
+        webClient.post().uri("/api/auth/signup")
+                .body(BodyInserters.fromValue(new SignupRequest(
+                        "John", "Doe", "johnDoe@acme.com", "PasswordForJune")))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .json("{\"error\": \"Bad Request\",\"message\": \"" + PASSWORT_HACKED_ERRORMSG +
+                        "\", \"path\": \"/api/auth/signup\"}");
     }
 }

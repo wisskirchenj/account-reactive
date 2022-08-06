@@ -28,10 +28,11 @@ The request JSON looks as:<pre>
     "password": "123456"
 }</pre>
 
-> POST /api/auth/changepass (authenticated). -> currently just checks authentication and returns 200 or 401 empty.
-Will be implemented later with change password functionality.
+> POST /api/auth/changepass (authenticated). -> receives a Json with newPassword, which is validated on length and checked
+against a collection of breached passwords (This breach check is also done on signup and for every authenticated endpoint!)
+If the password further differs from the previous one, an informative success Json is returned.
 
-> GET /api/empl/payment (authenticated). -> currently returns the login data (same as after suceesful signup) of the
+> GET /api/empl/payment (authenticated). -> currently returns the login data (same as after successful signup) of the
 authenticated user's principal.
 
 [//]: # (Project was completed on xx.0d.22.)

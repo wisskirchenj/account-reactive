@@ -51,6 +51,8 @@ public class RoutingConfiguration {
     private RouterFunction<ServerResponse> accountRoutes(AccountHandler accountHandler) {
         return route()
                 .GET("/api/empl/payment", accountHandler::accessPayrolls)
+                .POST("/api/acct/payments", accountHandler::uploadPayrolls)
+                .PUT("/api/acct/payments", accountHandler::changePayrolls)
                 .build();
     }
 }

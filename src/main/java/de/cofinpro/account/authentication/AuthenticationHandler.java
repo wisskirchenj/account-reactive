@@ -76,13 +76,13 @@ public class AuthenticationHandler {
             return Mono.error(new ServerWebInputException(passwordValidationError));
         }
         return userRepository.findByEmail(tuple.getT2().getName())
-                .flatMap(userDetails -> {
-                    if (passwordEncoder.matches(newPassword, userDetails.getPassword())) {
+                .ofType(Login.class)
+                .flatMap(user -> {
+                    if (passwordEncoder.matches(newPassword, user.getPassword())) {
                         return Mono.error(new ServerWebInputException(SAME_PASSWORD_ERRORMSG));
                     } else {
-                        ((Login) userDetails).setPassword(passwordEncoder.encode(newPassword));
-                        return userRepository
-                                .save((Login) userDetails)
+                        user.setPassword(passwordEncoder.encode(newPassword));
+                        return userRepository.save(user)
                                 .map(login -> new ChangepassResponse(login.getEmail(), PASSWORD_UPDATEMSG));
                     }});
     }
@@ -130,8 +130,9 @@ public class AuthenticationHandler {
     private Mono<SignupResponse> saveUser(SignupRequest signupRequest) {
         return userRepository.findByEmail(signupRequest.email())
                 .defaultIfEmpty(Login.unknown())
-                .flatMap(userDetails -> {
-                    if (((Login) userDetails).isUnknown()) {
+                .ofType(Login.class)
+                .flatMap(user -> {
+                    if (user.isUnknown()) {
                         return userRepository
                                 .save(Login.fromSignupRequest(signupRequest,
                                         passwordEncoder.encode(signupRequest.password())))

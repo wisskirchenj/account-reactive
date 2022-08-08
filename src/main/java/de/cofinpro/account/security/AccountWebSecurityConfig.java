@@ -37,7 +37,7 @@ public class AccountWebSecurityConfig {
                         .authenticationManager(authenticationManager)
                 )
                 .authorizeExchange()
-                .pathMatchers(HttpMethod.POST,"/api/auth/signup").permitAll()
+                .pathMatchers("/api/auth/signup", "/api/acct/payments").permitAll()
                 .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()
                 .pathMatchers("/api/**").authenticated()
                 .and().formLogin();

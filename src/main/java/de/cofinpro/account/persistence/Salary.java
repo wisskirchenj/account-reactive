@@ -32,7 +32,11 @@ public class Salary {
 
     public static Salary fromSalaryRecord(SalaryRecord salaryRecord) {
         return Salary.builder().email(salaryRecord.employee()).monthlySalary(salaryRecord.salary())
-                .period(salaryRecord.period()).build();
+                .period(yearFirst(salaryRecord.period())).build();
+    }
+
+    public static String yearFirst(String period) {
+        return period.substring(3) + "-" + period.substring(0,2);
     }
 
     public static Salary empty() {

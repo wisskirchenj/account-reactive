@@ -6,6 +6,8 @@ import de.cofinpro.account.persistence.Salary;
 import de.cofinpro.account.persistence.SalaryReactiveRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -18,12 +20,14 @@ import reactor.core.publisher.Mono;
 import reactor.util.function.Tuple2;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static de.cofinpro.account.configuration.AccountConfiguration.*;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.util.function.Predicate.not;
+import static org.springframework.data.domain.Sort.Direction.ASC;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 /**
@@ -53,10 +57,25 @@ public class AccountHandler {
      * @return an EmployeeResponse object
      */
     public Mono<ServerResponse> accessPayrolls(ServerRequest request) {
+        Optional<String> searchPeriod = request.queryParam("period");
+        if (searchPeriod.isPresent() && !searchPeriod.get().matches("(0[1-9]|1[0-2])-[1-9]\\d{3}")) {
+            return Mono.error(new ServerWebInputException("Wrong Date: Use mm-yyyy format!"));
+        }
         return request.principal()
-                .flatMap(principal -> ok()
-                        .body(userRepository.findByEmail(principal.getName()).map(Login::createEmployeeResponse),
-                                EmployeeResponse.class));
+                .flatMap(principal -> ok().body(selectSalaries(principal.getName(), searchPeriod),
+                new ParameterizedTypeReference<>(){}));
+    }
+
+    private Mono<List<SalaryResponse>> selectSalaries(String email, Optional<String> searchPeriod) {
+            return userRepository.findByEmail(email).ofType(Login.class)
+                    .flatMap(login -> searchPeriod.isEmpty()
+                            ? salaryRepository.findAllByEmail(email, Sort.by(ASC, "period"))
+                                .map(salary -> SalaryResponse.fromLoginAndSalary(salary, login))
+                                .collectList()
+                            : salaryRepository
+                                .findByEmployeeAndPeriod(email, Salary.yearFirst(searchPeriod.get()))
+                                .map(salary -> List.of(SalaryResponse.fromLoginAndSalary(salary, login)))
+                    );
     }
 
     public Mono<ServerResponse> changePayrolls(ServerRequest request) {
@@ -70,7 +89,7 @@ public class AccountHandler {
             return Mono.error(new ServerWebInputException(hibernateValidationErrors));
         }
         return salaryRepository
-                .findByEmployeeAndPeriod(salaryRecord.employee(), salaryRecord.period())
+                .findByEmployeeAndPeriod(salaryRecord.employee(), Salary.yearFirst(salaryRecord.period()))
                 .defaultIfEmpty(Salary.empty())
                 .flatMap(salary ->
                         salary.isEmpty() ? Mono.error(new ServerWebInputException(NO_SUCH_SALES_RECORD_ERRORMSG))
@@ -118,7 +137,7 @@ public class AccountHandler {
                         return Mono.just(RECORDMSG_START.formatted(recordId, NO_SUCH_EMPLOYEE_ERRORMSG));
                     } else {
                         return salaryRepository
-                                .findByEmployeeAndPeriod(salaryRecord.employee(), salaryRecord.period())
+                                .findByEmployeeAndPeriod(salaryRecord.employee(), Salary.yearFirst(salaryRecord.period()))
                                 .hasElement()
                                 .map(hasSalaryElement -> TRUE.equals(hasSalaryElement) ?
                                         RECORDMSG_START.formatted(recordId, RECORD_ALREADY_EXISTS_ERRORMSG) : "");

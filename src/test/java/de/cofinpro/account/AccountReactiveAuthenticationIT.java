@@ -4,12 +4,15 @@ import de.cofinpro.account.authentication.ChangepassRequest;
 import de.cofinpro.account.authentication.ChangepassResponse;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
+import de.cofinpro.account.persistence.Login;
+import de.cofinpro.account.persistence.LoginReactiveRepository;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
@@ -27,6 +30,13 @@ class AccountReactiveAuthenticationIT {
 
     @Autowired
     WebTestClient webClient;
+
+    @Autowired
+    LoginReactiveRepository userRepository;
+
+
+    @Autowired
+    PasswordEncoder passwordEncoder;
 
     private static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/test_db.mv.db");
 
@@ -94,6 +104,21 @@ class AccountReactiveAuthenticationIT {
                 .exchange()
                 .expectStatus().isUnauthorized()
                 .expectBody().json("{\"message\": \"Invalid Credentials\"}");
+    }
+
+    @Test
+    void whenSignedUpUserWithBreachedPasswordCorrectlyAuthenticates_Then401Returned() {
+        userRepository.save(Login.fromSignupRequest(
+                new SignupRequest("A", "B", "a.b@acme.com", "PasswordForJune"),
+                        passwordEncoder.encode("PasswordForJune")))
+                .block();
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("a.b@acme.com", "PasswordForJune"))
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody().json("{\"message\": \"" + PASSWORD_HACKED_ERRORMSG
+                        + " Please change!\"}");
+
     }
 
     @Test

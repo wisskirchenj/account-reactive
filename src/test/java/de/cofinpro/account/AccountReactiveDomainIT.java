@@ -2,6 +2,7 @@ package de.cofinpro.account;
 
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.domain.SalaryRecord;
+import de.cofinpro.account.domain.SalaryResponse;
 import de.cofinpro.account.domain.StatusResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -160,6 +161,48 @@ class AccountReactiveDomainIT {
                 .expectStatus().isOk()
                 .expectBody(StatusResponse.class)
                 .value(StatusResponse::status, equalTo(UPDATED_SUCCESSFULLY));
+    }
+
+
+    @Test
+    void whenGetPayment_ThenSalaryResponseReturned() {
+        signup(new SignupRequest("Jan", "Doe", "j.d@acme.com", "123456789012"));
+        webClient.post().uri("/api/acct/payments")
+                .bodyValue(List.of(
+                        new SalaryRecord("j.d@acme.com", "05-2022", 5010),
+                        new SalaryRecord("j.d@acme.com", "07-2022", 7025),
+                        new SalaryRecord("j.d@acme.com", "06-2021", 6000)))
+                .exchange()
+                .expectStatus().isOk();
+        webClient.get().uri(uri -> uri.path("/api/empl/payment").queryParam("period", "07-2022").build())
+                .headers(headers -> headers.setBasicAuth("j.d@acme.com", "123456789012"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(SalaryResponse[].class)
+                .value(list -> list[0].salary(), equalTo("70 dollar(s) 25 cent(s)"))
+                .value(list -> list[0].name(), equalTo("Jan"))
+                .value(list -> list[0].lastname(), equalTo("Doe"))
+                .value(list -> list[0].period(), equalTo("July-2022"));
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("j.d@acme.com", "123456789012"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(SalaryResponse[].class)
+                .value(list -> list[1].salary(), equalTo("50 dollar(s) 10 cent(s)"))
+                .value(list -> list[0].salary(), equalTo("60 dollar(s) 00 cent(s)"))
+                .value(list -> list[2].salary(), equalTo("70 dollar(s) 25 cent(s)"))
+                .value(list -> list[0].name(), equalTo("Jan"))
+                .value(list -> list[0].lastname(), equalTo("Doe"))
+                .value(list -> list[1].period(), equalTo("May-2022"))
+                .value(list -> list[2].period(), equalTo("July-2022"))
+                .value(list -> list[0].period(), equalTo("June-2021"));
+        webClient.get().uri(uri -> uri.path("/api/empl/payment").queryParam("period", "7-2022").build())
+                .headers(headers -> headers.setBasicAuth("j.d@acme.com", "123456789012"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message")
+                .value(equalTo("Wrong Date: Use mm-yyyy format!"));
     }
 
     void signup(SignupRequest request) {

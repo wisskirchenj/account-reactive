@@ -1,5 +1,8 @@
 package de.cofinpro.account.configuration;
 
+/**
+ * configuration collection for the domain endpoints.
+ */
 public class AccountConfiguration {
 
     private AccountConfiguration() {

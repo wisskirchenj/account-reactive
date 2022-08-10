@@ -2,6 +2,10 @@ package de.cofinpro.account.configuration;
 
 import java.util.Set;
 
+/**
+ * collection of configuration stuff, constants for the authentication endpoints
+ * - e.g. breached passwords set and check-method.
+ */
 public class AuthenticationConfiguration {
 
     private AuthenticationConfiguration() {

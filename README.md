@@ -32,8 +32,21 @@ The request JSON looks as:<pre>
 against a collection of breached passwords (This breach check is also done on signup and for every authenticated endpoint!)
 If the password further differs from the previous one, an informative success Json is returned.
 
-> GET /api/empl/payment (authenticated). -> currently returns the login data (same as after successful signup) of the
-authenticated user's principal.
+> POST /api/acct/payments (unauthenticated). -> receives a Json array of SalaryRecords as :<pre>
+{
+    "employee": "p.s@acme.COM",
+    "period": "01-2022",
+    "salary": 515050
+}</pre>
+Salary in Cents for a given period. The list may contain records for different employees, but no duplicates
+regarding employee and period. Further, the employees must all be registered and no previous sales record
+must exist in the database for an employee - month combi.
+
+> PUT /api/acct/payments (unauthenticated). -> receives one Json object as above via POST, but the employee
+period must in this case be existent in the database to get updated.
+
+> GET /api/empl/payment (authenticated - with request query parameter "period") -> gives an authenticated user
+access to his payroll data - either all when leaving out the period-parameter - or for the parameterized month.
 
 [//]: # (Project was completed on xx.0d.22.)
 
@@ -52,4 +65,7 @@ Spring properties, signup data are saved, authenticated endpoints (all but signu
 
 06.08.22 Stage 3 completed - custom authentication manager to include breached passwords check in login authentication,
 change password functionality, Mono-zipWith and Tuple2 used..
+
+10.08.22 Stage 4 completed - domain logic endpoints /api/acct/payments and /api/empl/payment added / adapted to
+full functionality. Flux publishers used and many intersting reactor operators.
 

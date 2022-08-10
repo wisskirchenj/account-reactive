@@ -7,6 +7,9 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+/**
+ * Reactive Sorting-Repository for the Salary entities.
+ */
 @Repository
 public interface SalaryReactiveRepository extends ReactiveSortingRepository<Salary, Long> {
 

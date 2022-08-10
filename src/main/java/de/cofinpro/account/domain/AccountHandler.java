@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static de.cofinpro.account.configuration.AccountConfiguration.*;
+import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.util.function.Predicate.not;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
@@ -58,14 +59,6 @@ public class AccountHandler {
                                 EmployeeResponse.class));
     }
 
-    @Transactional
-    public Mono<ServerResponse> uploadPayrolls(ServerRequest request) {
-        return request.bodyToFlux(SalaryRecord.class)
-                .index().flatMap(this::validateAll)
-                .collectList()
-                .flatMap(list -> ok().body(saveSalaryRecord(list), StatusResponse.class));
-    }
-
     public Mono<ServerResponse> changePayrolls(ServerRequest request) {
         return request.bodyToMono(SalaryRecord.class)
                 .flatMap(salaryRecord -> ok().body(validateAndUpdate(salaryRecord), StatusResponse.class));
@@ -82,8 +75,16 @@ public class AccountHandler {
                 .flatMap(salary ->
                         salary.isEmpty() ? Mono.error(new ServerWebInputException(NO_SUCH_SALES_RECORD_ERRORMSG))
                                 : salaryRepository.save(salary.setMonthlySalary(salaryRecord.salary()))
-                                .map(res -> new StatusResponse(UPDATED_SUCCESSFULLY))
+                                .map(saved -> new StatusResponse(UPDATED_SUCCESSFULLY))
                 );
+    }
+
+    @Transactional
+    public Mono<ServerResponse> uploadPayrolls(ServerRequest request) {
+        return request.bodyToFlux(SalaryRecord.class)
+                .index().flatMap(this::validateAll)
+                .collectList()
+                .flatMap(list -> ok().body(saveSalaryRecord(list), StatusResponse.class));
     }
 
     /**
@@ -113,14 +114,14 @@ public class AccountHandler {
         return userRepository.findByEmail(salaryRecord.employee())
                 .hasElement()
                 .flatMap(hasUserElement -> {
-                    if (TRUE.equals(hasUserElement)) {
+                    if (FALSE.equals(hasUserElement)) {
+                        return Mono.just(RECORDMSG_START.formatted(recordId, NO_SUCH_EMPLOYEE_ERRORMSG));
+                    } else {
                         return salaryRepository
                                 .findByEmployeeAndPeriod(salaryRecord.employee(), salaryRecord.period())
                                 .hasElement()
                                 .map(hasSalaryElement -> TRUE.equals(hasSalaryElement) ?
                                         RECORDMSG_START.formatted(recordId, RECORD_ALREADY_EXISTS_ERRORMSG) : "");
-                    } else {
-                        return Mono.just(RECORDMSG_START.formatted(recordId, NO_SUCH_EMPLOYEE_ERRORMSG));
                     }});
     }
 

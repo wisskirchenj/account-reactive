@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
 @AutoConfigureWebTestClient
-class AccountReactiveApplicationTests {
+class AccountReactiveAuthenticationIT {
 
     @Autowired
     WebTestClient webClient;
@@ -32,7 +32,7 @@ class AccountReactiveApplicationTests {
     private static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/test_db.mv.db");
 
     @BeforeAll
-    static void dbsetup() throws IOException {
+    static void dbSetup() throws IOException {
         Files.deleteIfExists(TEST_DB_PATH);
         Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
     }
@@ -67,11 +67,7 @@ class AccountReactiveApplicationTests {
 
     @Test
     void whenSignupTwiceSameEmailIgnoreCase_ThenUserExistsReturned() {
-        webClient.post().uri("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret"))
-                .exchange()
-                .expectStatus().isOk();
+        signup(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret"));
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secretsecret"))
@@ -82,11 +78,7 @@ class AccountReactiveApplicationTests {
 
     @Test
     void whenSignedUpUserGetsPayment_ThenEmployeeResponseReturned() {
-        webClient.post().uri("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"))
-                .exchange()
-                .expectStatus().isOk();
+        signup(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"));
         webClient.get().uri("/api/empl/payment")
                 .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secretsecret"))
                 .exchange()
@@ -100,11 +92,7 @@ class AccountReactiveApplicationTests {
 
     @Test
     void whenSignedUpUserGetsPaymentBadCredentials_Then401Returned() {
-        webClient.post().uri("/api/auth/signup")
-                .contentType(MediaType.APPLICATION_JSON)
-                .bodyValue(new SignupRequest("Ulrich", "Weiss", "uweiss@acme.com", "secretsecret"))
-                .exchange()
-                .expectStatus().isOk();
+        signup(new SignupRequest("Ulrich", "Weiss", "uweiss@acme.com", "secretsecret"));
         webClient.get().uri("/api/empl/payment")
                 .headers(headers -> headers.setBasicAuth("uweiss@acme.com", "secret_secret"))
                 .exchange()
@@ -136,10 +124,7 @@ class AccountReactiveApplicationTests {
 
     @Test
     void stage3_example3And4AndFurtherErrors() {
-        webClient.post().uri("/api/auth/signup")
-                .bodyValue(new SignupRequest("John", "Doe", "johnDoe@acme.com", "123456123456"))
-                .exchange()
-                .expectStatus().isOk();
+        signup(new SignupRequest("John", "Doe", "johnDoe@acme.com", "123456123456"));
         webClient.post().uri("/api/auth/changepass")
                 .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "123456123456"))
                 .bodyValue(new ChangepassRequest("bZPGqH7fW"))
@@ -172,5 +157,12 @@ class AccountReactiveApplicationTests {
                 .expectBody()
                 .json("{\"error\": \"Bad Request\",\"message\": \"" + SAME_PASSWORD_ERRORMSG +
                         "\", \"path\": \"/api/auth/changepass\"}");
+    }
+
+    void signup(SignupRequest request) {
+        webClient.post().uri("/api/auth/signup")
+                .bodyValue(request)
+                .exchange()
+                .expectStatus().isOk();
     }
 }

@@ -1,6 +1,7 @@
 package de.cofinpro.account.authentication;
 
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 
 /**
@@ -11,6 +12,6 @@ import javax.validation.constraints.Pattern;
  * @param password not empty
  */
 public record SignupRequest(@NotEmpty String name, @NotEmpty String lastname,
-                            @NotEmpty @Pattern(regexp ="(?i)\\w+(\\.\\w+){0,2}@acme.com") String email,
+                            @NotNull @Pattern(regexp ="(?i)\\w+(\\.\\w+){0,2}@acme.com") String email,
                             @NotEmpty String password) {
 }

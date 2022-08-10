@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class AuthenticationHandlerValidatorUnitTest {
 
-    Validator validator;
+    Validator validator; // JPAUnitValidator not working on immutable Records :-(
 
     @BeforeEach
     void setup() {
@@ -38,10 +38,28 @@ class AuthenticationHandlerValidatorUnitTest {
                 Arguments.of(new SignupRequest("Toni", "", "t.s@acme.com", "123456")),
                 Arguments.of(new SignupRequest("Toni", null, "t.s@acme.com", "123456")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", null, "123456")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "", "123456")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", "juergen.wisskirchen@acme.de", "123456")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", "juergen.wisskirchen@cofinpro.com", "123456")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.com", "")),
                 Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.com", null))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource
+    void signupValidRequests(SignupRequest signupRequest) {
+        assertEquals(0, validator.validate(signupRequest).size());
+    }
+
+    static Stream<Arguments> signupValidRequests() {
+        return Stream.of(
+                Arguments.of(new SignupRequest("T", "S", "t.s@acme.com", "123")),
+                Arguments.of(new SignupRequest(" ", " ", "s@acme.com", "123456")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "toni.seeleer.ext@ACME.COM", "123456654321")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.COM", "123456")),
+                Arguments.of(new SignupRequest("T.-Martin", "Dr. Seeler", "a@AcMe.com", "123456")),
+                Arguments.of(new SignupRequest("Toni", "Seeler", "t.s@acme.com", "=PÖ_#+$§@23"))
         );
     }
 }

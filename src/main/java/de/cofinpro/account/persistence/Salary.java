@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
@@ -14,10 +15,13 @@ import org.springframework.data.relational.core.mapping.Table;
  */
 @Data
 @Builder
+@Accessors(chain = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("SALARY")
 public class Salary {
+
+    private static final Salary EMPTY = new Salary();
 
     @Id
     private long id;
@@ -29,5 +33,13 @@ public class Salary {
     public static Salary fromSalaryRecord(SalaryRecord salaryRecord) {
         return Salary.builder().email(salaryRecord.employee()).monthlySalary(salaryRecord.salary())
                 .period(salaryRecord.period()).build();
+    }
+
+    public static Salary empty() {
+        return EMPTY;
+    }
+
+    public boolean isEmpty() {
+        return this == EMPTY;
     }
 }

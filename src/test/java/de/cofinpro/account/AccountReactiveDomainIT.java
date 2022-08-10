@@ -40,6 +40,35 @@ class AccountReactiveDomainIT {
                 .jsonPath("$.path").value(equalTo("/api/acct/payments"));
     }
 
+
+    @Test
+    void whenInvalidPutSalaryRequest_Then400() {
+        signup(new SignupRequest("Iota", "Doe", "i.d@acme.com", "123456789012"));
+        webClient.put().uri("/api/acct/payments")
+                .bodyValue(new SalaryRecord("i.d@acme.com", "13-2022", 5000))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo("Wrong date!"))
+                .jsonPath("$.path").value(equalTo("/api/acct/payments"));
+        webClient.put().uri("/api/acct/payments")
+                .bodyValue(new SalaryRecord("notuser.d@acme.com", "06-2022", 5000))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(NO_SUCH_SALES_RECORD_ERRORMSG));
+        webClient.post().uri("/api/acct/payments")
+                .bodyValue(new SalaryRecord("i.d@acme.com", "06-2022", 5000))
+                .exchange()
+                .expectStatus().isOk();
+        webClient.put().uri("/api/acct/payments")
+                .bodyValue(new SalaryRecord("i.d@acme.com", "05-2022", 5000))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(NO_SUCH_SALES_RECORD_ERRORMSG));
+    }
+
     @Test
     void whenValidSalaryRequest_ThenOkAndStatusResponseReturned() {
         signup(new SignupRequest("Alf", "Doe", "a.d@acme.com", "123456789012"));
@@ -113,6 +142,24 @@ class AccountReactiveDomainIT {
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.message").value(equalTo(DUPLICATE_RECORDS_ERRORMSG));
+    }
+
+    @Test
+    void whenValidPutSalaryRequest_ThenOkAndStatusResponse() {
+        signup(new SignupRequest("Hans", "Doe", "h.d@acme.com", "123456789012"));
+        webClient.post().uri("/api/acct/payments")
+                .bodyValue(List.of(
+                        new SalaryRecord("h.d@acme.com", "05-2022", 2000),
+                        new SalaryRecord("h.d@acme.com", "07-2022", 2000),
+                        new SalaryRecord("h.d@acme.com", "06-2022", 2000)))
+                .exchange()
+                .expectStatus().isOk();
+        webClient.put().uri("/api/acct/payments")
+                .bodyValue(new SalaryRecord("h.d@acme.com", "06-2022", 123456))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(StatusResponse.class)
+                .value(StatusResponse::status, equalTo(UPDATED_SUCCESSFULLY));
     }
 
     void signup(SignupRequest request) {

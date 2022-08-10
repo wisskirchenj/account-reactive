@@ -61,13 +61,29 @@ public class AccountHandler {
     @Transactional
     public Mono<ServerResponse> uploadPayrolls(ServerRequest request) {
         return request.bodyToFlux(SalaryRecord.class)
-                .index().flatMap(this::validate)
+                .index().flatMap(this::validateAll)
                 .collectList()
                 .flatMap(list -> ok().body(saveSalaryRecord(list), StatusResponse.class));
     }
 
-    public Mono<ServerResponse> changePayrolls(ServerRequest ignoredRequest) {
-        return ok().bodyValue("Implement me!");
+    public Mono<ServerResponse> changePayrolls(ServerRequest request) {
+        return request.bodyToMono(SalaryRecord.class)
+                .flatMap(salaryRecord -> ok().body(validateAndUpdate(salaryRecord), StatusResponse.class));
+    }
+
+    private Mono<StatusResponse> validateAndUpdate(SalaryRecord salaryRecord) {
+        String hibernateValidationErrors = validateHibernate(salaryRecord);
+        if (!hibernateValidationErrors.isEmpty()) {
+            return Mono.error(new ServerWebInputException(hibernateValidationErrors));
+        }
+        return salaryRepository
+                .findByEmployeeAndPeriod(salaryRecord.employee(), salaryRecord.period())
+                .defaultIfEmpty(Salary.empty())
+                .flatMap(salary ->
+                        salary.isEmpty() ? Mono.error(new ServerWebInputException(NO_SUCH_SALES_RECORD_ERRORMSG))
+                                : salaryRepository.save(salary.setMonthlySalary(salaryRecord.salary()))
+                                .map(res -> new StatusResponse(UPDATED_SUCCESSFULLY))
+                );
     }
 
     /**
@@ -75,16 +91,22 @@ public class AccountHandler {
      * @param tuple request data to validate and save
      * @return a signup response as Mono if new user saved, error Mono else.
      */
-    private Mono<Tuple2<SalaryRecord,String>> validate(Tuple2<Long, SalaryRecord> tuple) {
-        Errors errors = new BeanPropertyBindingResult(tuple.getT2(), SalaryRecord.class.getName());
-        validator.validate(tuple.getT2(), errors);
-        Mono<String> errorMono = Mono.just(errors.hasErrors() ? "Record %d: ".formatted(tuple.getT1())
-                + errors.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining(" && ")) : "");
-        if (!errors.hasErrors()) {
+    private Mono<Tuple2<SalaryRecord,String>> validateAll(Tuple2<Long, SalaryRecord> tuple) {
+        String hibernateValidationErrors = validateHibernate(tuple.getT2());
+        Mono<String> errorMono = Mono.just(hibernateValidationErrors.isEmpty() ? ""
+                : RECORDMSG_START.formatted(tuple.getT1(), hibernateValidationErrors));
+        if (hibernateValidationErrors.isEmpty()) {
             errorMono = validateWithDatabase(tuple.getT1(), tuple.getT2());
         }
         return Mono.just(tuple.getT2()).zipWith(errorMono);
+    }
+
+    private String validateHibernate(SalaryRecord salaryRecord) {
+        Errors errors = new BeanPropertyBindingResult(salaryRecord, SalaryRecord.class.getName());
+        validator.validate(salaryRecord, errors);
+        return errors.hasErrors() ? errors.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
+                .collect(Collectors.joining(" && "))
+                : "";
     }
 
     private Mono<String> validateWithDatabase(long recordId, SalaryRecord salaryRecord) {
@@ -96,9 +118,9 @@ public class AccountHandler {
                                 .findByEmployeeAndPeriod(salaryRecord.employee(), salaryRecord.period())
                                 .hasElement()
                                 .map(hasSalaryElement -> TRUE.equals(hasSalaryElement) ?
-                                        "Record %d: %s".formatted(recordId, RECORD_ALREADY_EXISTS_ERRORMSG) : "");
+                                        RECORDMSG_START.formatted(recordId, RECORD_ALREADY_EXISTS_ERRORMSG) : "");
                     } else {
-                        return Mono.just("Record %d: %s".formatted(recordId, NO_SUCH_EMPLOYEE_ERRORMSG));
+                        return Mono.just(RECORDMSG_START.formatted(recordId, NO_SUCH_EMPLOYEE_ERRORMSG));
                     }});
     }
 

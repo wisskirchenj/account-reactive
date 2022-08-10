@@ -53,8 +53,8 @@ public class AccountHandler {
     /**
      * controller handler for GET endpoint available only to authenticated users /api/empl/payment, that gives access to
      * the payment data for the authenticated user. -> in stage 2 (tempor.) returns only the user data...
-     * @param request the ServerRequest containing the user's principal data.
-     * @return an EmployeeResponse object
+     * @param request the ServerRequest containing the user's principal data and an optional period request parameter.
+     * @return ServerResponse Mono with a list of SalaryResponse data as body
      */
     public Mono<ServerResponse> accessPayrolls(ServerRequest request) {
         Optional<String> searchPeriod = request.queryParam("period");

@@ -2,7 +2,6 @@ package de.cofinpro.account.persistence;
 
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
-import de.cofinpro.account.domain.EmployeeResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -48,16 +47,6 @@ public class Login implements UserDetails {
     public static Login fromSignupRequest(SignupRequest request, String encryptedPassword) {
         return Login.builder().name(request.name()).lastname(request.lastname()).email(request.email())
                 .password(encryptedPassword).build();
-    }
-
-    /**
-     * create an EmployeeResponse from a data base retrieved login user
-     * @param userDetails user details found via principal's name
-     * @return newly created response object
-     */
-    public static EmployeeResponse createEmployeeResponse(UserDetails userDetails) {
-        Login user = (Login) userDetails;
-        return new EmployeeResponse(user.id, user.name, user.lastname, user.email);
     }
 
     @Override

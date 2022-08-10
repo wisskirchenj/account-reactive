@@ -4,7 +4,6 @@ import de.cofinpro.account.authentication.ChangepassRequest;
 import de.cofinpro.account.authentication.ChangepassResponse;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
-import de.cofinpro.account.domain.EmployeeResponse;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -83,11 +82,8 @@ class AccountReactiveAuthenticationIT {
                 .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secretsecret"))
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(EmployeeResponse.class)
-                .value(response -> assertTrue(response.id() > 0))
-                .value(EmployeeResponse::name, equalTo("Hans"))
-                .value(EmployeeResponse::lastname, equalTo("Schmitz"))
-                .value(EmployeeResponse::email, equalTo("h.schmitz@acme.com"));
+                .expectBody()
+                .json("[]");
     }
 
     @Test

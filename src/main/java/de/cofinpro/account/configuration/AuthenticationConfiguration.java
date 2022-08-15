@@ -31,8 +31,7 @@ public class AuthenticationConfiguration {
     public ReactiveUserDetailsService userDetailsService(LoginReactiveRepository users,
                                                          LoginRoleReactiveRepository roles) {
         return email -> users.findByEmail(email).ofType(Login.class)
-                    .zipWith(roles.findRolesByEmail(email))
-                    .map(tup -> tup.getT1().setRoles(tup.getT2()));
+                    .zipWith(roles.findRolesByEmail(email), Login::setRoles);
     }
 
     @Bean

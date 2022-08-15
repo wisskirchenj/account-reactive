@@ -146,9 +146,9 @@ public class AuthenticationHandler {
                         return userRepository
                                 .save(Login.fromSignupRequest(signupRequest,
                                         passwordEncoder.encode(signupRequest.password())))
-                                .zipWith(roleRepository.save(LoginRole.builder()
-                                        .email(signupRequest.email()).role(role).build()))
-                                .map(tup -> tup.getT1().setRoles(List.of(tup.getT2().getRole())).toSignupResponse());
+                                .zipWith(roleRepository.save(LoginRole.builder().email(signupRequest.email()).role(role)
+                                        .build()).map(LoginRole::getRole).map(List::of), Login::setRoles)
+                                .map(Login::toSignupResponse);
                     } else {
                         return Mono.error(new ServerWebInputException(USER_EXISTS_ERRORMSG));
                     }});

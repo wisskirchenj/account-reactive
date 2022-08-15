@@ -17,7 +17,7 @@ and some business logic endpoints accessing employee payroll data in a database.
 
 Currently implemented endpoints:
 
-> POST /api/auth/singup (unauthenticated). -> receives a signup JSON to register a user. Returns a response without the password
+> <b>POST /api/auth/signup (unauthenticated)</b>. -> receives a signup JSON to register a user. Returns a response without the password
 but with an id, which the user is stored under in the database. If the requested user exists already, a 400 informative error
 is returned.
 The request JSON looks as:<pre>
@@ -28,11 +28,11 @@ The request JSON looks as:<pre>
     "password": "123456"
 }</pre>
 
-> POST /api/auth/changepass (authenticated). -> receives a Json with newPassword, which is validated on length and checked
+> <b>POST /api/auth/changepass (authenticated)</b>. -> receives a Json with newPassword, which is validated on length and checked
 against a collection of breached passwords (This breach check is also done on signup and for every authenticated endpoint!)
 If the password further differs from the previous one, an informative success Json is returned.
 
-> POST /api/acct/payments (unauthenticated). -> receives a Json array of SalaryRecords as :<pre>
+> <b>POST /api/acct/payments (authorized - Role ACCOUNTANT)</b>. -> receives a Json array of SalaryRecords as :<pre>
 {
     "employee": "p.s@acme.COM",
     "period": "01-2022",
@@ -42,10 +42,10 @@ Salary in Cents for a given period. The list may contain records for different e
 regarding employee and period. Further, the employees must all be registered and no previous sales record
 must exist in the database for an employee - month combi.
 
-> PUT /api/acct/payments (unauthenticated). -> receives one Json object as above via POST, but the employee
+> <b>PUT /api/acct/payments (authorized - Role ACCOUNTANT)</b>. -> receives one Json object as above via POST, but the employee
 period must in this case be existent in the database to get updated.
 
-> GET /api/empl/payment (authenticated - with request query parameter "period") -> gives an authenticated user
+> <b>GET /api/empl/payment (authorized - Roles USER & ACCOUNTANT - with request query parameter "period")</b> -> gives an authenticated user
 access to his payroll data - either all when leaving out the period-parameter - or for the parameterized month.
 
 [//]: # (Project was completed on xx.0d.22.)
@@ -67,5 +67,5 @@ Spring properties, signup data are saved, authenticated endpoints (all but signu
 change password functionality, Mono-zipWith and Tuple2 used..
 
 10.08.22 Stage 4 completed - domain logic endpoints /api/acct/payments and /api/empl/payment added / adapted to
-full functionality. Flux publishers used and many intersting reactor operators.
+full functionality. Flux publishers used and many interesting reactor operators.
 

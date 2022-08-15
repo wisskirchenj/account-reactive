@@ -15,6 +15,8 @@ public interface LoginRoleReactiveRepository extends ReactiveCrudRepository<Logi
 
     Flux<LoginRole> findAllByEmail(String email);
 
+    Mono<Void> deleteAllByEmail(String email);
+
     default Mono<List<String>> findRolesByEmail(String email) {
         return findAllByEmail(email).map(LoginRole::getRole).collectList();
     }

@@ -37,7 +37,6 @@ class AccountReactiveAuthenticationIT {
     @Autowired
     LoginReactiveRepository userRepository;
 
-
     @Autowired
     PasswordEncoder passwordEncoder;
 
@@ -142,7 +141,7 @@ class AccountReactiveAuthenticationIT {
     @Test
     void whenSignedUpUserWithBreachedPasswordCorrectlyAuthenticates_Then401Returned() {
         userRepository.save(Login.fromSignupRequest(
-                new SignupRequest("A", "B", "a.b@acme.com", "PasswordForJune"),
+                    new SignupRequest("A", "B", "a.b@acme.com", "PasswordForJune"),
                         passwordEncoder.encode("PasswordForJune")))
                 .block();
         webClient.get().uri("/api/empl/payment")

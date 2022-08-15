@@ -9,6 +9,8 @@ public class AccountConfiguration {
         // no instances
     }
 
+    public static final String PERIOD_REGEX = "(0[1-9]|1[0-2])-[1-9]\\d{3}";
+
     public static final String NO_SUCH_EMPLOYEE_ERRORMSG = "No such employee registered!";
 
     public static final String NO_SUCH_SALES_RECORD_ERRORMSG = "No such record found for this employee and period!";

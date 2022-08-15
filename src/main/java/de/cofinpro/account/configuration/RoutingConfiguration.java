@@ -42,7 +42,7 @@ public class RoutingConfiguration {
     private RouterFunction<ServerResponse> adminRoutes(AdminHandler adminHandler) {
         return route()
                 .GET("/api/admin/user", adminHandler::displayUsers)
-                .DELETE("/api/admin/user", adminHandler::deleteUser)
+                .DELETE("/api/admin/user/{email}", adminHandler::deleteUser)
                 .PUT("/api/admin/user/role", adminHandler::toggleRole)
                 .build();
     }

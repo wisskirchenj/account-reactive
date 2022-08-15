@@ -8,8 +8,6 @@ import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.Duration;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -30,8 +28,8 @@ public class AuthenticationConfiguration {
     @Autowired
     public ReactiveUserDetailsService userDetailsService(LoginReactiveRepository users,
                                                          LoginRoleReactiveRepository roles) {
-        return email -> users.findByEmail(email).ofType(Login.class)
-                    .zipWith(roles.findRolesByEmail(email), Login::setRoles);
+        return email -> users.findByEmail(email)
+                .zipWith(roles.findRolesByEmail(email), Login::setRoles);
     }
 
     @Bean
@@ -39,15 +37,11 @@ public class AuthenticationConfiguration {
         return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 
-    @Bean
-    @Autowired
-    public List<Role> getRoles(RoleReactiveRepository roleRepository) {
-        return roleRepository.findAll().collectList().block(Duration.ofMillis(200));
-    }
-
     public static final int BCRYPT_STRENGTH = 13;
 
     public static final int MIN_PASSWORD_LENGTH = 12;
+
+    public static final String EMAIL_REGEX = "(?i)\\w+(\\.\\w+){0,2}@acme.com";
 
     public static final String USER_EXISTS_ERRORMSG = "User exist!";
 

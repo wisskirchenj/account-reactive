@@ -58,7 +58,7 @@ public class AccountHandler {
      */
     public Mono<ServerResponse> accessPayrolls(ServerRequest request) {
         Optional<String> searchPeriod = request.queryParam("period");
-        if (searchPeriod.isPresent() && !searchPeriod.get().matches("(0[1-9]|1[0-2])-[1-9]\\d{3}")) {
+        if (searchPeriod.isPresent() && !searchPeriod.get().matches(PERIOD_REGEX)) {
             return Mono.error(new ServerWebInputException("Wrong Date: Use mm-yyyy format!"));
         }
         return request.principal()

@@ -59,42 +59,6 @@ public class AuthenticationHandler {
     }
 
     /**
-     * controller entry point (routing handler) for the authenticated route /api/auth/changepass.
-     * request body containing new password is zipped with principal and validated for password update.
-     * @param request The ServerRequest with a ChangepassRequest body.
-     * @return a ChangepassResponse Json (200) as body of a ServerResponse or a 400 if validation error or same password
-     */
-    public Mono<ServerResponse> changePassword(ServerRequest request) {
-        return request.bodyToMono(ChangepassRequest.class)
-                .zipWith(request.principal())
-                .flatMap(tuple -> ok().body(validateAndChangepass(tuple), ChangepassResponse.class));
-    }
-
-    /**
-     * validates the password (length and not breached) and checks if it differs from last password.
-     * If so, the Login-entity to this user is updated ad saved to the database.
-     * @param tuple Tuple2 consisting of the ChangepassRequest and the user's principal
-     * @return ChangepassResponse if password is updated or informative 400 error Mono
-     */
-    private Mono<ChangepassResponse> validateAndChangepass(Tuple2<ChangepassRequest, ? extends Principal> tuple) {
-        final String newPassword = tuple.getT1().newPassword();
-        String passwordValidationError = validatePassword(newPassword);
-        if (!passwordValidationError.isEmpty()) {
-            return Mono.error(new ServerWebInputException(passwordValidationError));
-        }
-        return userRepository.findByEmail(tuple.getT2().getName())
-                .ofType(Login.class)
-                .flatMap(user -> {
-                    if (passwordEncoder.matches(newPassword, user.getPassword())) {
-                        return Mono.error(new ServerWebInputException(SAME_PASSWORD_ERRORMSG));
-                    } else {
-                        user.setPassword(passwordEncoder.encode(newPassword));
-                        return userRepository.save(user)
-                                .map(login -> new ChangepassResponse(login.getEmail(), PASSWORD_UPDATEMSG));
-                    }});
-    }
-
-    /**
      * hibernate validate and save a singup request. If the count is 0, the signed up user gets the Administrator role,
      * otherwise a User role
      * @param tuple request data to validate and save - zipped with user-count
@@ -140,7 +104,6 @@ public class AuthenticationHandler {
     private Mono<SignupResponse> saveUser(SignupRequest signupRequest, String role) {
         return userRepository.findByEmail(signupRequest.email())
                 .defaultIfEmpty(Login.unknown())
-                .ofType(Login.class)
                 .flatMap(user -> {
                     if (user.isUnknown()) {
                         return userRepository
@@ -151,6 +114,41 @@ public class AuthenticationHandler {
                                 .map(Login::toSignupResponse);
                     } else {
                         return Mono.error(new ServerWebInputException(USER_EXISTS_ERRORMSG));
+                    }});
+    }
+
+    /**
+     * controller entry point (routing handler) for the authenticated route /api/auth/changepass.
+     * request body containing new password is zipped with principal and validated for password update.
+     * @param request The ServerRequest with a ChangepassRequest body.
+     * @return a ChangepassResponse Json (200) as body of a ServerResponse or a 400 if validation error or same password
+     */
+    public Mono<ServerResponse> changePassword(ServerRequest request) {
+        return request.bodyToMono(ChangepassRequest.class)
+                .zipWith(request.principal())
+                .flatMap(tuple -> ok().body(validateAndChangepass(tuple), ChangepassResponse.class));
+    }
+
+    /**
+     * validates the password (length and not breached) and checks if it differs from last password.
+     * If so, the Login-entity to this user is updated ad saved to the database.
+     * @param tuple Tuple2 consisting of the ChangepassRequest and the user's principal
+     * @return ChangepassResponse if password is updated or informative 400 error Mono
+     */
+    private Mono<ChangepassResponse> validateAndChangepass(Tuple2<ChangepassRequest, ? extends Principal> tuple) {
+        final String newPassword = tuple.getT1().newPassword();
+        String passwordValidationError = validatePassword(newPassword);
+        if (!passwordValidationError.isEmpty()) {
+            return Mono.error(new ServerWebInputException(passwordValidationError));
+        }
+        return userRepository.findByEmail(tuple.getT2().getName())
+                .flatMap(user -> {
+                    if (passwordEncoder.matches(newPassword, user.getPassword())) {
+                        return Mono.error(new ServerWebInputException(SAME_PASSWORD_ERRORMSG));
+                    } else {
+                        user.setPassword(passwordEncoder.encode(newPassword));
+                        return userRepository.save(user)
+                                .map(login -> new ChangepassResponse(login.getEmail(), PASSWORD_UPDATEMSG));
                     }});
     }
 }

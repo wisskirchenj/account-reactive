@@ -2,6 +2,8 @@ package de.cofinpro.account.authentication;
 
 import de.cofinpro.account.persistence.Login;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
+import de.cofinpro.account.persistence.LoginRole;
+import de.cofinpro.account.persistence.LoginRoleReactiveRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +18,7 @@ import org.springframework.validation.Validator;
 import reactor.util.function.Tuple2;
 
 import java.security.Principal;
+import java.util.List;
 
 import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
@@ -29,14 +32,17 @@ public class AuthenticationHandler {
 
     private final Validator validator;
     private final LoginReactiveRepository userRepository;
+    private final LoginRoleReactiveRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Autowired
     public AuthenticationHandler(Validator validator,
                                  LoginReactiveRepository userRepository,
+                                 LoginRoleReactiveRepository roleRepository,
                                  PasswordEncoder passwordEncoder) {
         this.validator = validator;
         this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -48,7 +54,8 @@ public class AuthenticationHandler {
      */
     public Mono<ServerResponse> signup(ServerRequest request) {
         return request.bodyToMono(SignupRequest.class)
-                .flatMap(req -> ok().body(validateAndSave(req), SignupResponse.class));
+                .zipWith(userRepository.count())
+                .flatMap(tuple -> ok().body(validateAndSave(tuple), SignupResponse.class));
     }
 
     /**
@@ -88,11 +95,14 @@ public class AuthenticationHandler {
     }
 
     /**
-     * hibernate validated
-     * @param signupRequest request data to validate and save
+     * hibernate validate and save a singup request. If the count is 0, the signed up user gets the Administrator role,
+     * otherwise a User role
+     * @param tuple request data to validate and save - zipped with user-count
      * @return a signup response as Mono if new user saved, error Mono else.
      */
-    private Mono<SignupResponse> validateAndSave(SignupRequest signupRequest) {
+    private Mono<SignupResponse> validateAndSave(Tuple2<SignupRequest, Long> tuple) {
+        SignupRequest signupRequest = tuple.getT1();
+        String role = tuple.getT2() == 0 ? "ROLE_ADMINISTRATOR" : "ROLE_USER";
         Errors errors = new BeanPropertyBindingResult(signupRequest, SignupRequest.class.getName());
         validator.validate(signupRequest, errors);
         if (errors.hasErrors()) {
@@ -102,7 +112,7 @@ public class AuthenticationHandler {
         if (!passwordValidationError.isEmpty()) {
             return Mono.error(new ServerWebInputException(passwordValidationError));
         }
-        return saveUser(signupRequest);
+        return saveUser(signupRequest, role);
     }
 
     /**
@@ -127,7 +137,7 @@ public class AuthenticationHandler {
      * @param signupRequest already validated signup request data
      * @return a signup response mono on successful save, an error mono if user existed.
      */
-    private Mono<SignupResponse> saveUser(SignupRequest signupRequest) {
+    private Mono<SignupResponse> saveUser(SignupRequest signupRequest, String role) {
         return userRepository.findByEmail(signupRequest.email())
                 .defaultIfEmpty(Login.unknown())
                 .ofType(Login.class)
@@ -136,7 +146,9 @@ public class AuthenticationHandler {
                         return userRepository
                                 .save(Login.fromSignupRequest(signupRequest,
                                         passwordEncoder.encode(signupRequest.password())))
-                                .map(Login::toSignupResponse);
+                                .zipWith(roleRepository.save(LoginRole.builder()
+                                        .email(signupRequest.email()).role(role).build()))
+                                .map(tup -> tup.getT1().setRoles(List.of(tup.getT2().getRole())).toSignupResponse());
                     } else {
                         return Mono.error(new ServerWebInputException(USER_EXISTS_ERRORMSG));
                     }});

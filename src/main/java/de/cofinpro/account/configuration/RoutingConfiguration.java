@@ -24,7 +24,7 @@ public class RoutingConfiguration {
                                                  AdminHandler adminHandler) {
         return route().add(authenticationRoutes(authenticationHandler))
                 .add(accountRoutes(accountHandler))
-                //.add(adminRoutes(adminHandler))
+                .add(adminRoutes(adminHandler))
                 .build();
     }
 
@@ -41,6 +41,9 @@ public class RoutingConfiguration {
 
     private RouterFunction<ServerResponse> adminRoutes(AdminHandler adminHandler) {
         return route()
+                .GET("/api/admin/user", adminHandler::displayUsers)
+                .DELETE("/api/admin/user", adminHandler::deleteUser)
+                .PUT("/api/admin/user/role", adminHandler::toggleRole)
                 .build();
     }
 

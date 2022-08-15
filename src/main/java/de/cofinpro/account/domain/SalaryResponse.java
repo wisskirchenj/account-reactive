@@ -30,8 +30,7 @@ public record SalaryResponse(String name, String lastname, String period, String
      * translate the database record to textual representation (e.g. 2021-05 -> May-2021)
      */
     private static String monthFirst(String period) {
-       return Month.of(Integer.parseInt(period.substring(5)))
-               .getDisplayName(TextStyle.FULL, Locale.US) +
+       return Month.of(Integer.parseInt(period.substring(5))).getDisplayName(TextStyle.FULL, Locale.US) +
                 "-" + period.substring(0, 4);
     }
 }

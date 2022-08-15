@@ -4,9 +4,11 @@ import de.cofinpro.account.authentication.ChangepassRequest;
 import de.cofinpro.account.authentication.ChangepassResponse;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
+import de.cofinpro.account.domain.SalaryRecord;
 import de.cofinpro.account.persistence.Login;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
@@ -19,6 +21,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
 import static org.hamcrest.CoreMatchers.equalTo;
@@ -38,12 +41,21 @@ class AccountReactiveAuthenticationIT {
     @Autowired
     PasswordEncoder passwordEncoder;
 
-    private static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/test_db.mv.db");
+    static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/test_db.mv.db");
+    static boolean adminSignedUp = false;
 
     @BeforeAll
     static void dbSetup() throws IOException {
         Files.deleteIfExists(TEST_DB_PATH);
         Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
+    }
+
+    @BeforeEach
+    void setup() {
+        if (!adminSignedUp) {
+            adminSignedUp = true;
+            signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+        }
     }
 
     @Test
@@ -86,7 +98,7 @@ class AccountReactiveAuthenticationIT {
     }
 
     @Test
-    void whenSignedUpUserGetsPayment_ThenEmployeeResponseReturned() {
+    void whenAuthorizedUserGetsPayment_ThenOkAndEmptyRecordReturned() {
         signup(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"));
         webClient.get().uri("/api/empl/payment")
                 .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secretsecret"))
@@ -94,6 +106,27 @@ class AccountReactiveAuthenticationIT {
                 .expectStatus().isOk()
                 .expectBody()
                 .json("[]");
+    }
+
+    @Test
+    void whenAuthenticatedUnauthorizedUserGetsPayment_ThenOkReturned() {
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .json("{\"message\": \"Access Denied!\"}");
+    }
+
+    @Test
+    void whenAuthenticatedUnauthorizedUserPostPayrolls_Then403Returned() {
+        webClient.post().uri("/api/acct/payments")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(List.of(new SalaryRecord("admin@acme.com", "06-2022", 5000)))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .json("{\"message\": \"Access Denied!\"}");
     }
 
     @Test

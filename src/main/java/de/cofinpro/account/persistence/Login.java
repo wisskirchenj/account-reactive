@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.Accessors;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Table;
@@ -22,6 +23,7 @@ import java.util.List;
  */
 @Data
 @Builder
+@Accessors(chain = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("LOGIN")
@@ -51,7 +53,7 @@ public class Login implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return AuthorityUtils.createAuthorityList(roles.toArray(new String[0]));
+        return AuthorityUtils.createAuthorityList(roles.toArray(String[]::new));
     }
 
     @Override
@@ -83,7 +85,7 @@ public class Login implements UserDetails {
      * map a saved Login entity into an appropriate response for the signup
      */
     public SignupResponse toSignupResponse() {
-        return new SignupResponse(id, name, lastname, email);
+        return new SignupResponse(id, name, lastname, email, roles);
     }
 
     /**

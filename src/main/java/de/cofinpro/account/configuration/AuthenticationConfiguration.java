@@ -1,15 +1,49 @@
 package de.cofinpro.account.configuration;
 
+import de.cofinpro.account.persistence.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.time.Duration;
+import java.util.List;
 import java.util.Set;
 
 /**
- * collection of configuration stuff, constants for the authentication endpoints
- * - e.g. breached passwords set and check-method.
+ * collection of authentication related beans and configuration stuff as constants for the authentication endpoints,
+ * breached passwords set and check-method.
  */
+@Configuration
 public class AuthenticationConfiguration {
 
-    private AuthenticationConfiguration() {
-        // no instances
+    /**
+     * UserDetailsService bean, that just delegates the retrieval to the LoginReactiveRepository
+     * (functional interface implementation of the findByUsername - method).
+     * NOTE: the bean is instantiated by the Spring framework internally...
+     * @param users the Login Reactive repository
+     * @return UserDetailsService instance (anonymous via method-reference).
+     */
+    @Bean
+    @Autowired
+    public ReactiveUserDetailsService userDetailsService(LoginReactiveRepository users,
+                                                         LoginRoleReactiveRepository roles) {
+        return email -> users.findByEmail(email).ofType(Login.class)
+                    .zipWith(roles.findRolesByEmail(email))
+                    .map(tup -> tup.getT1().setRoles(tup.getT2()));
+    }
+
+    @Bean
+    public PasswordEncoder getEncoder() {
+        return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
+    }
+
+    @Bean
+    @Autowired
+    public List<Role> getRoles(RoleReactiveRepository roleRepository) {
+        return roleRepository.findAll().collectList().block(Duration.ofMillis(200));
     }
 
     public static final int BCRYPT_STRENGTH = 13;

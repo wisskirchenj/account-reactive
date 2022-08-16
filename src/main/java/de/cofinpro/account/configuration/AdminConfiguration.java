@@ -9,6 +9,10 @@ import org.springframework.context.annotation.Configuration;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * configuration collection for the admin endpoints. Offers a bean, that reads all system roles from the roles
+ * table for validating use in the admin handler. Many string constants for user (error) messages.
+ */
 @Configuration
 public class AdminConfiguration {
 

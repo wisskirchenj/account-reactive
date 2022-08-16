@@ -37,7 +37,20 @@ public class AuthenticationConfiguration {
         return new BCryptPasswordEncoder(BCRYPT_STRENGTH);
     }
 
-    public static final int BCRYPT_STRENGTH = 13;
+    /**
+     * checks a provided password against a collection of known breached passwords.
+     * @param password to check
+     * @return check result (true, if password is breached)
+     */
+    public static boolean passwordIsHacked(String password) {
+        return breachedPasswords.contains(password);
+    }
+
+    private static final Set<String> breachedPasswords = Set.of("PasswordForJanuary", "PasswordForFebruary",
+            "PasswordForMarch", "PasswordForApril", "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
+            "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
+
+    public static final int BCRYPT_STRENGTH = 8;
 
     public static final int MIN_PASSWORD_LENGTH = 12;
 
@@ -53,17 +66,4 @@ public class AuthenticationConfiguration {
     public static final String SAME_PASSWORD_ERRORMSG = "The passwords must be different!";
 
     public static final String PASSWORD_UPDATEMSG = "The password has been updated successfully";
-
-    /**
-     * checks a provided password against a collection of known breached passwords.
-     * @param password to check
-     * @return check result (true, if password is breached)
-     */
-    public static boolean passwordIsHacked(String password) {
-        return breachedPasswords.contains(password);
-    }
-
-    private static final Set<String> breachedPasswords = Set.of("PasswordForJanuary", "PasswordForFebruary",
-            "PasswordForMarch", "PasswordForApril", "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
-            "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
 }

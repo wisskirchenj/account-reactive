@@ -15,10 +15,16 @@ public class AdminConfiguration {
     @Bean
     @Autowired
     public List<Role> getRoles(RoleReactiveRepository roles) {
-        return roles.findAll().collectList().block(Duration.ofMillis(200));
+        return roles.findAll().collectList().block(Duration.ofMillis(300));
     }
 
+    public static final String ADMIN_ROLE = "ROLE_ADMINISTRATOR";
     public static final String DELETED_SUCCESSFULLY = "Deleted successfully!";
     public static final String USER_NOT_FOUND_ERRORMSG = "User not found!";
+    public static final String ROLE_NOT_FOUND_ERRORMSG = "Role not found!";
+    public static final String USER_HASNT_ROLE_ERRORMSG = "The user does not have a role!";
+    public static final String USER_HAS_ROLE_ALREADY_ERRORMSG = "The user has the role already!";
+    public static final String USER_NEEDS_ROLE_ERRORMSG = "The user must have at least one role!";
     public static final String CANT_DELETE_ADMIN_ERRORMSG = "Can't remove ADMINISTRATOR role!";
+    public static final String INVALID_ROLE_COMBINE_ERRORMSG = "The user cannot combine administrative and business roles!";
 }

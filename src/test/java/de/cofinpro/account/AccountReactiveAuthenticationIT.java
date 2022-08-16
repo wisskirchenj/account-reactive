@@ -52,8 +52,8 @@ class AccountReactiveAuthenticationIT {
     @BeforeEach
     void setup() {
         if (!adminSignedUp) {
-            adminSignedUp = true;
             signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+            adminSignedUp = true;
         }
     }
 

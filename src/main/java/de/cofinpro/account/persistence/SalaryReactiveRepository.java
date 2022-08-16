@@ -17,4 +17,6 @@ public interface SalaryReactiveRepository extends ReactiveSortingRepository<Sala
     Mono<Salary> findByEmployeeAndPeriod(String email, String period);
 
     Flux<Salary> findAllByEmail(String email, Sort sort);
+
+    Mono<Void> deleteAllByEmail(String email);
 }

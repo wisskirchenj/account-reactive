@@ -1,5 +1,6 @@
 package de.cofinpro.account;
 
+import de.cofinpro.account.admin.RoleToggleRequest;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.domain.SalaryRecord;
 import de.cofinpro.account.domain.SalaryResponse;
@@ -25,7 +26,7 @@ class AccountReactiveDomainIT {
     @Autowired
     WebTestClient webClient;
 
-    static boolean adminSignedUp = false;
+    static boolean usersSignedUp = false;
 
     @BeforeAll
     static void dbSetup() throws IOException {
@@ -34,17 +35,22 @@ class AccountReactiveDomainIT {
 
     @BeforeEach
     void setup() {
-        if (!adminSignedUp) {
-            adminSignedUp = true;
+        if (!usersSignedUp) {
             signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+            signup(new SignupRequest("Accountant", "role", "acct@acme.com", "acctacctacct"));
+            webClient.put().uri("/api/admin/user/role")
+                    .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                    .bodyValue(new RoleToggleRequest("acct@acme.com", "ACCOUNTANT", "grant"))
+                            .exchange().expectStatus().isOk();
+            signup(new SignupRequest("Pete", "Doe", "p.d@acme.com", "123456789012"));
+            usersSignedUp = true;
         }
     }
 
     @Test
     void whenInvalidSalaryRequest_Then400() {
-        signup(new SignupRequest("Pete", "Doe", "p.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("p.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(new SalaryRecord("p.d@acme.com", "13-2022", 100))
                 .exchange()
                 .expectStatus().isBadRequest()
@@ -55,30 +61,29 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenInvalidPutSalaryRequest_Then400() {
-        signup(new SignupRequest("Iota", "Doe", "i.d@acme.com", "123456789012"));
         webClient.put().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("i.d@acme.com", "123456789012"))
-                .bodyValue(new SalaryRecord("i.d@acme.com", "13-2022", 5000))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
+                .bodyValue(new SalaryRecord("p.d@acme.com", "13-2022", 5000))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.message").value(equalTo("Wrong date!"))
                 .jsonPath("$.path").value(equalTo("/api/acct/payments"));
         webClient.put().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("i.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(new SalaryRecord("notuser.d@acme.com", "06-2022", 5000))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.message").value(equalTo(NO_SUCH_SALES_RECORD_ERRORMSG));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("i.d@acme.com", "123456789012"))
-                .bodyValue(new SalaryRecord("i.d@acme.com", "06-2022", 5000))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
+                .bodyValue(new SalaryRecord("p.d@acme.com", "06-2022", 5000))
                 .exchange()
                 .expectStatus().isOk();
         webClient.put().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("i.d@acme.com", "123456789012"))
-                .bodyValue(new SalaryRecord("i.d@acme.com", "05-2022", 5000))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
+                .bodyValue(new SalaryRecord("p.d@acme.com", "05-2022", 5000))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -90,7 +95,7 @@ class AccountReactiveDomainIT {
         signup(new SignupRequest("Alf", "Doe", "a.d@acme.com", "123456789012"));
         signup(new SignupRequest("Gary", "Doe", "g.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("a.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
                         new SalaryRecord("a.d@acme.com", "07-2022", 10000),
                         new SalaryRecord("g.d@acme.com", "06-2022", 5000)))
@@ -102,9 +107,8 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenValidSalaryRequestUserNotExists_Then400AndErrorMessage() {
-        signup(new SignupRequest("Mattes", "Doe", "m.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("m.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
                         new SalaryRecord("not.there@acme.com", "06-2022", 5000)))
                 .exchange()
@@ -115,18 +119,17 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenValidSalaryRequestSalaryExistsInDb_Then400AndErrorMessage() {
-        signup(new SignupRequest("Beta", "Doe", "b.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("b.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
-                        new SalaryRecord("b.d@acme.com", "06-2022", 5000)))
+                        new SalaryRecord("p.d@acme.com", "04-2022", 5000)))
                 .exchange()
                 .expectStatus().isOk();
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("b.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
-                        new SalaryRecord("b.d@acme.com", "05-2022", 5000),
-                        new SalaryRecord("b.d@acme.com", "06-2022", 5000)))
+                        new SalaryRecord("p.d@acme.com", "05-2022", 5000),
+                        new SalaryRecord("p.d@acme.com", "04-2022", 5000)))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -135,15 +138,14 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenDuplicateRecordsInRequest_Then400AndErrorMessage() {
-        signup(new SignupRequest("Charlie", "Doe", "c.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("c.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
-                        new SalaryRecord("c.d@acme.com", "01-2022", 5000),
-                        new SalaryRecord("c.d@acme.com", "02-2022", 1000),
-                        new SalaryRecord("c.d@acme.com", "03-2022", 2000),
-                        new SalaryRecord("c.d@acme.com", "05-2022", 4000),
-                        new SalaryRecord("c.d@acme.com", "03-2022", 5000)))
+                        new SalaryRecord("p.d@acme.com", "01-2023", 5000),
+                        new SalaryRecord("p.d@acme.com", "02-2023", 1000),
+                        new SalaryRecord("p.d@acme.com", "03-2023", 2000),
+                        new SalaryRecord("p.d@acme.com", "05-2023", 4000),
+                        new SalaryRecord("p.d@acme.com", "03-2023", 5000)))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -152,15 +154,14 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenTriplicateRecordsInRequest_Then400AndErrorMessage() {
-        signup(new SignupRequest("Dave", "Doe", "d.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("d.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
-                        new SalaryRecord("d.d@acme.com", "03-2022", 5000),
-                        new SalaryRecord("d.d@acme.com", "02-2022", 1000),
-                        new SalaryRecord("d.d@acme.com", "03-2022", 2000),
-                        new SalaryRecord("d.d@acme.com", "05-2022", 4000),
-                        new SalaryRecord("d.d@acme.com", "03-2022", 5000)))
+                        new SalaryRecord("p.d@acme.com", "03-2021", 5000),
+                        new SalaryRecord("p.d@acme.com", "02-2021", 1000),
+                        new SalaryRecord("p.d@acme.com", "03-2021", 2000),
+                        new SalaryRecord("p.d@acme.com", "05-2021", 4000),
+                        new SalaryRecord("p.d@acme.com", "03-2021", 5000)))
                 .exchange()
                 .expectStatus().isBadRequest()
                 .expectBody()
@@ -171,7 +172,7 @@ class AccountReactiveDomainIT {
     void whenValidPutSalaryRequest_ThenOkAndStatusResponse() {
         signup(new SignupRequest("Hans", "Doe", "h.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("h.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
                         new SalaryRecord("h.d@acme.com", "05-2022", 2000),
                         new SalaryRecord("h.d@acme.com", "07-2022", 2000),
@@ -179,7 +180,7 @@ class AccountReactiveDomainIT {
                 .exchange()
                 .expectStatus().isOk();
         webClient.put().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("h.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(new SalaryRecord("h.d@acme.com", "06-2022", 123456))
                 .exchange()
                 .expectStatus().isOk()
@@ -192,7 +193,7 @@ class AccountReactiveDomainIT {
     void whenGetPayment_ThenSalaryResponseReturned() {
         signup(new SignupRequest("Jan", "Doe", "j.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
-                .headers(headers -> headers.setBasicAuth("j.d@acme.com", "123456789012"))
+                .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
                         new SalaryRecord("j.d@acme.com", "05-2022", 5010),
                         new SalaryRecord("j.d@acme.com", "07-2022", 7025),

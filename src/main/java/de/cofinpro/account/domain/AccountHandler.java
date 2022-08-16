@@ -81,6 +81,7 @@ public class AccountHandler {
                             : salaryRepository
                                 .findByEmployeeAndPeriod(email, Salary.yearFirst(searchPeriod.get()))
                                 .map(salary -> List.of(SalaryResponse.fromLoginAndSalary(salary, login)))
+                                .defaultIfEmpty(List.of())
                     );
     }
 
@@ -159,8 +160,9 @@ public class AccountHandler {
     private String validateHibernate(SalaryRecord salaryRecord) {
         Errors errors = new BeanPropertyBindingResult(salaryRecord, SalaryRecord.class.getName());
         validator.validate(salaryRecord, errors);
-        return errors.hasErrors() ? errors.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
-                .collect(Collectors.joining(" && "))
+        return errors.hasErrors()
+                ? errors.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
+                    .collect(Collectors.joining(" && "))
                 : "";
     }
 

@@ -1,5 +1,6 @@
 package de.cofinpro.account;
 
+import de.cofinpro.account.admin.RoleToggleRequest;
 import de.cofinpro.account.admin.UserDeletedResponse;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
@@ -15,7 +16,7 @@ import java.io.IOException;
 import java.util.List;
 
 import static de.cofinpro.account.configuration.AdminConfiguration.*;
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
 
 @SpringBootTest
 @AutoConfigureWebTestClient
@@ -34,9 +35,9 @@ class AccountReactiveAdminIT {
     @BeforeEach
     void setup() {
         if (!usersSignedUp) {
-            usersSignedUp = true;
             signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
             signup(new SignupRequest("Hans", "Wurst", "hw@acme.com", "useruseruser"));
+            usersSignedUp = true;
         }
     }
 
@@ -60,7 +61,7 @@ class AccountReactiveAdminIT {
 
     @Test
     void whenAdminAuthenticatedUserNotExists_Then404() {
-        webClient.delete().uri("/api/admin/user/a@acme.com")
+        webClient.delete().uri("/api/admin/user/not_there@acme.com")
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                 .exchange()
                 .expectStatus().isNotFound()
@@ -97,7 +98,6 @@ class AccountReactiveAdminIT {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(SignupResponse[].class)
-                .value(list -> list.length, equalTo(2))
                 .value(list -> list[0].id(), equalTo(1L))
                 .value(list -> list[1].id(), equalTo(2L))
                 .value(list -> list[0].roles(), equalTo(List.of("ROLE_ADMINISTRATOR")))
@@ -127,6 +127,106 @@ class AccountReactiveAdminIT {
                 .expectStatus().isForbidden()
                 .expectBody()
                 .json("{\"message\": \"Access Denied!\"}");
+    }
+
+    @Test
+    void whenInvalidPutRole_Then400AndAllValidationErrors() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("acct@acmecom", "ACCOUNTANT", "granD"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(containsString("operation needs 'grant' or 'remove'"))
+                .jsonPath("$.message").value(containsString("&&"))
+                .jsonPath("$.message").value(containsString("Not a valid corporate Email"));
+    }
+
+    @Test
+    void whenPutRoleInvalidUser_Then404() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("acct@acme.com", "ACCOUNTANT", "grant"))
+                .exchange().expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(USER_NOT_FOUND_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleInvalidRole_Then404() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("hw@acme.com", "ACCOUNT", "grant"))
+                .exchange().expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(ROLE_NOT_FOUND_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleUserHasntRole_Then400() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("admin@acme.com", "ACCOUNTANT", "remove"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(USER_HASNT_ROLE_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleUserHasRoleAlready_Then400() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("hw@acme.com", "user", "grant"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(USER_HAS_ROLE_ALREADY_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleRemoveLastRole_Then400() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("hw@acme.com", "user", "remove"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(USER_NEEDS_ROLE_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleUserGrantAdministrator_Then400() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("hw@acme.com", "ADMINISTRATOR", "GRANT"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(INVALID_ROLE_COMBINE_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleRemoveAdministrator_Then400() {
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("admin@acme.com", "ADMINISTRATOR", "remove"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(CANT_DELETE_ADMIN_ERRORMSG));
+    }
+
+    @Test
+    void whenPutRoleValid_Then200AndRolesReturned() {
+        signup(new SignupRequest("Anton", "A", "a@acme.com", "useruseruser"));
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("a@acme.com", "accountant", "GRANT"))
+                .exchange().expectStatus().isOk()
+                .expectBody(SignupResponse.class)
+                .value(SignupResponse::email, equalTo("a@acme.com"))
+                .value(SignupResponse::roles, containsInAnyOrder("ROLE_USER", "ROLE_ACCOUNTANT"));
+        webClient.put().uri("/api/admin/user/role")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new RoleToggleRequest("a@acme.com", "ACCOUNTANT", "Remove"))
+                .exchange().expectStatus().isOk()
+                .expectBody(SignupResponse.class)
+                .value(SignupResponse::roles, equalTo(List.of("ROLE_USER")));
     }
 
     void signup(SignupRequest request) {

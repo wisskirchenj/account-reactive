@@ -37,7 +37,7 @@ public class AccountWebSecurityConfig {
                 // without next line: accessDeniedHandler not working for POST (i.e. CSRF-relevant calls)
                 .pathMatchers("/error", "/error/**").permitAll()
                 .pathMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
-                .pathMatchers("/api/acct/**").hasRole("USER")
+                .pathMatchers("/api/acct/**").hasRole("ACCOUNTANT")
                 .pathMatchers(HttpMethod.GET, "/api/empl/payment").hasAnyRole("ACCOUNTANT", "USER")
                 .pathMatchers("/api/**").authenticated()
                 .and()

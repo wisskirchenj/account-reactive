@@ -48,6 +48,21 @@ period must in this case be existent in the database to get updated.
 > <b>GET /api/empl/payment (authorized - Roles USER & ACCOUNTANT - with request query parameter "period")</b> -> gives an authenticated user
 access to his payroll data - either all when leaving out the period-parameter - or for the parameterized month.
 
+> <b>GET /api/admin/user (authorized - Roles ADMINISTRATOR)</b> -> list all user data records with id, roles
+and name, email information.
+
+> <b>DELETE /api/admin/user (authorized - Roles ADMINISTRATOR - with path parameter "email")</b> -> delete the specified
+user together with all her roles and salary information. Admin cannot delete himself from the system.
+
+> <b>PUT /api/admin/user/role (authorized - Roles ADMINISTRATOR)</b> -> toggles (Grant/Revoke) a role to
+a specified user - consumes Json RoleToggleRequest:<pre>
+{
+    "user": "p.s@acme.COM",
+    "role": "ACCOUNTANT",   (or "USER"; "ADMINISTRATOR" is not allowed to grant or remove) 
+    "operation": "Grant"    (or "REMOVE")
+}</pre> It is also not allowed to assign "USER" or "ACCOUNTANT" to the "ADMINISTRATOR", nor is it allowed
+to delete the last role remaining from a user.
+
 [//]: # (Project was completed on xx.0d.22.)
 
 ## Repository Contents
@@ -67,5 +82,8 @@ Spring properties, signup data are saved, authenticated endpoints (all but signu
 change password functionality, Mono-zipWith and Tuple2 used..
 
 10.08.22 Stage 4 completed - domain logic endpoints /api/acct/payments and /api/empl/payment added / adapted to
-full functionality. Flux publishers used and many interesting reactor operators.
+full functionality. Flux publishers used and many interisting reactor operators.
+
+16.08.22 Stage 5 completed - authorization role concept and admin endpoints added. Used .then() Publisher-operator
+for Mono<Void> returning delete-repo methods.
 

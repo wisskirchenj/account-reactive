@@ -120,7 +120,7 @@ public class AdminHandler {
      * rule checks are applied. If everything passes, the role is toggled for the specified user (granted
      * or revoked) and a complete user SignupResponse is returned.
      * @param roleToggleRequest json with all information to process
-     * @return the Sif´´nuoResponse Mono or error mono (400 or 404) for various rule faíls.
+     * @return the SignupResponse Mono or error mono (400 or 404) for various rule faíls.
      */
     private Mono<SignupResponse> validateAndToggleRole(RoleToggleRequest roleToggleRequest) {
         String hibernateValidationErrors = validateHibernate(roleToggleRequest);

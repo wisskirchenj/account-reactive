@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
+import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
@@ -37,6 +38,12 @@ public class Login implements UserDetails {
     private String lastname;
     private String email;
     private String password;
+    @Column("account_locked")
+    @Builder.Default()
+    private boolean accountLocked = false;
+    @Column("failed_logins")
+    @Builder.Default()
+    private int failedLogins = 0;
 
     @Builder.Default()
     @Transient
@@ -68,7 +75,7 @@ public class Login implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !accountLocked;
     }
 
     @Override

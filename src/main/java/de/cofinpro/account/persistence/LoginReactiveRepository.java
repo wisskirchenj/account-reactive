@@ -13,4 +13,10 @@ public interface LoginReactiveRepository extends ReactiveSortingRepository<Login
     Mono<Login> findByEmail(String email);
 
     Mono<Void> deleteByEmail(String email);
+
+    default Mono<Login> toggleLock(String email, boolean lockRequested) {
+        return findByEmail(email)
+                .map(login -> login.setAccountLocked(lockRequested))
+                .flatMap(this::save);
+    }
 }

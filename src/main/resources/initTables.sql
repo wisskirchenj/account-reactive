@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS LOGIN_ROLES (
 );
 CREATE TABLE IF NOT EXISTS AUDIT (
                       id BIGINT AUTO_INCREMENT PRIMARY KEY NOT NULL,
-                      occurred_on DATE NOT NULL,
+                      date DATE NOT NULL,
                       action VARCHAR_IGNORECASE (20) NOT NULL,
                       subject VARCHAR_IGNORECASE (64),
                       object VARCHAR (128),

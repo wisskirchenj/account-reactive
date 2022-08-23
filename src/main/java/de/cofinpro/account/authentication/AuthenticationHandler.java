@@ -1,5 +1,6 @@
 package de.cofinpro.account.authentication;
 
+import de.cofinpro.account.audit.AuditLogger;
 import de.cofinpro.account.persistence.Login;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
 import de.cofinpro.account.persistence.LoginRole;
@@ -34,16 +35,18 @@ public class AuthenticationHandler {
     private final LoginReactiveRepository userRepository;
     private final LoginRoleReactiveRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogger auditLogger;
 
     @Autowired
     public AuthenticationHandler(Validator validator,
                                  LoginReactiveRepository userRepository,
                                  LoginRoleReactiveRepository roleRepository,
-                                 PasswordEncoder passwordEncoder) {
+                                 PasswordEncoder passwordEncoder, AuditLogger auditLogger) {
         this.validator = validator;
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
+        this.auditLogger = auditLogger;
     }
 
     /**
@@ -111,6 +114,8 @@ public class AuthenticationHandler {
                                         passwordEncoder.encode(signupRequest.password())))
                                 .zipWith(roleRepository.save(LoginRole.builder().email(signupRequest.email()).role(role)
                                         .build()).map(LoginRole::getRole).map(List::of), Login::setRoles)
+                                .zipWith(auditLogger.logCreateUser(signupRequest.email()),
+                                        (login, event) -> login)
                                 .map(Login::toSignupResponse);
                     } else {
                         return Mono.error(new ServerWebInputException(USER_EXISTS_ERRORMSG));

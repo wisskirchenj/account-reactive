@@ -1,5 +1,6 @@
 package de.cofinpro.account.configuration;
 
+import de.cofinpro.account.audit.AuditHandler;
 import de.cofinpro.account.domain.AccountHandler;
 import de.cofinpro.account.authentication.AuthenticationHandler;
 import de.cofinpro.account.admin.AdminHandler;
@@ -21,10 +22,22 @@ public class RoutingConfiguration {
     @Autowired
     public RouterFunction<ServerResponse> routes(AuthenticationHandler authenticationHandler,
                                                  AccountHandler accountHandler,
-                                                 AdminHandler adminHandler) {
+                                                 AdminHandler adminHandler,
+                                                 AuditHandler auditHandler) {
         return route().add(authenticationRoutes(authenticationHandler))
                 .add(accountRoutes(accountHandler))
                 .add(adminRoutes(adminHandler))
+                .add(auditRoutes(auditHandler))
+                .build();
+    }
+
+    /**
+     * route handling for the audit specific routes
+     * @param auditHandler handler
+     */
+    private RouterFunction<ServerResponse> auditRoutes(AuditHandler auditHandler) {
+        return route()
+                .GET("/api/security/events", auditHandler::getAuditEvents)
                 .build();
     }
 
@@ -44,6 +57,7 @@ public class RoutingConfiguration {
                 .GET("/api/admin/user", adminHandler::displayUsers)
                 .DELETE("/api/admin/user/{email}", adminHandler::deleteUser)
                 .PUT("/api/admin/user/role", adminHandler::toggleRole)
+                .PUT("/api/admin/user/access", adminHandler::toggleUserLock)
                 .build();
     }
 

@@ -36,6 +36,7 @@ public class AccountWebSecurityConfig {
                 .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()
                 // without next line: accessDeniedHandler not working for POST (i.e. CSRF-relevant calls)
                 .pathMatchers("/error", "/error/**").permitAll()
+                .pathMatchers("/api/security/**").hasRole("AUDITOR")
                 .pathMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
                 .pathMatchers("/api/acct/**").hasRole("ACCOUNTANT")
                 .pathMatchers(HttpMethod.GET, "/api/empl/payment").hasAnyRole("ACCOUNTANT", "USER")

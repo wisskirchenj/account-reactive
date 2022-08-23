@@ -1,6 +1,9 @@
 package de.cofinpro.account.admin;
 
+import de.cofinpro.account.audit.AuditLogger;
+import de.cofinpro.account.audit.LockUserToggleRequest;
 import de.cofinpro.account.authentication.SignupResponse;
+import de.cofinpro.account.domain.StatusResponse;
 import de.cofinpro.account.persistence.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -16,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,7 +30,7 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
 
 /**
  * service layer handler class for all admin specific endpoints /api/admin/user (GET, DELETE) and
- * /api/admin/user/role (PUT).
+ * /api/admin/user/{role, access} (PUT).
  */
 @Service
 public class AdminHandler {
@@ -34,6 +38,7 @@ public class AdminHandler {
     private final LoginReactiveRepository userRepository;
     private final LoginRoleReactiveRepository roleRepository;
     private final SalaryReactiveRepository salaryRepository;
+    private final AuditLogger auditLogger;
     private final List<Role> systemRoles;
     private final Validator validator;
 
@@ -41,11 +46,13 @@ public class AdminHandler {
     public AdminHandler(LoginReactiveRepository userRepository,
                         LoginRoleReactiveRepository roleRepository,
                         SalaryReactiveRepository salaryRepository,
+                        AuditLogger auditLogger,
                         List<Role> systemRoles,
                         Validator validator) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.salaryRepository = salaryRepository;
+        this.auditLogger = auditLogger;
         this.systemRoles = systemRoles;
         this.validator = validator;
     }
@@ -112,18 +119,50 @@ public class AdminHandler {
      */
     public Mono<ServerResponse> toggleRole(ServerRequest request) {
         return request.bodyToMono(RoleToggleRequest.class)
-                        .flatMap(req -> ok().body(validateAndToggleRole(req), SignupResponse.class));
+                        .flatMap(req -> ok().body(validateAndToggleRole(req, request.principal()),
+                                SignupResponse.class));
+    }
+
+    /**
+     * PUT /api/admin/user/access endpoint that consumes a LockUserToggleRequest in the Request body with information on
+     * which user to lock or unlock.
+     */
+    public Mono<ServerResponse> toggleUserLock(ServerRequest request) {
+        return request.bodyToMono(LockUserToggleRequest.class)
+                .flatMap(req -> ok().body(validateAndToggleLock(req), StatusResponse.class));
+    }
+
+    private Mono<StatusResponse> validateAndToggleLock(LockUserToggleRequest lockToggleRequest) {
+        String hibernateValidationErrors = validateHibernate(lockToggleRequest, LockUserToggleRequest.class);
+        if (!hibernateValidationErrors.isEmpty()) {
+            return Mono.error(new ServerWebInputException(hibernateValidationErrors));
+        }
+        boolean lockRequested = lockToggleRequest.operation().equalsIgnoreCase("lock");
+        return roleRepository.findRolesByEmail(lockToggleRequest.user())
+                .flatMap(this::isAdmin)
+                .flatMap(isAdmin -> {
+                    if (TRUE.equals(isAdmin)) {
+                        return Mono.error(new ServerWebInputException(CANT_LOCK_ADMIN_ERRORMSG));
+                    } else {
+                        return userRepository
+                                .toggleLock(lockToggleRequest.user(), lockRequested)
+                                .map(savedUser -> new StatusResponse("User %s %sed!".formatted(savedUser.getEmail(),
+                                        lockRequested ? "lock" : "unlock")));
+                    }
+                });
     }
 
     /**
      * hibernate validation, a role existence check vs the Roles-Table in the database and diverse
      * rule checks are applied. If everything passes, the role is toggled for the specified user (granted
      * or revoked) and a complete user SignupResponse is returned.
+     *
      * @param roleToggleRequest json with all information to process
      * @return the SignupResponse Mono or error mono (400 or 404) for various rule faíls.
      */
-    private Mono<SignupResponse> validateAndToggleRole(RoleToggleRequest roleToggleRequest) {
-        String hibernateValidationErrors = validateHibernate(roleToggleRequest);
+    private Mono<SignupResponse> validateAndToggleRole(RoleToggleRequest roleToggleRequest,
+                                                       Mono<? extends Principal> principal) {
+        String hibernateValidationErrors = validateHibernate(roleToggleRequest, RoleToggleRequest.class);
         if (!hibernateValidationErrors.isEmpty()) {
             return Mono.error(new ServerWebInputException(hibernateValidationErrors));
         }
@@ -136,10 +175,10 @@ public class AdminHandler {
                 .flatMap(userRoles -> isOperationValid(userRoles, roleToggleRequest))
                 .flatMap(requestedRole -> roleToggleRequest.operation().equalsIgnoreCase("remove")
                         ? roleRepository.deleteByEmailAndRole(roleToggleRequest.user(), requestedRole)
-                            .then(updatedUserResponse(roleToggleRequest.user()))
                         : roleRepository.save(LoginRole.builder().email(roleToggleRequest.user()).role(requestedRole).build())
-                            .then(updatedUserResponse(roleToggleRequest.user()))
-                );
+                ).then(principal)
+                .flatMap(admin -> auditLogger.logToggleRole(admin.getName(), roleToggleRequest))
+                .flatMap(sec -> updatedUserResponse(roleToggleRequest.user()));
     }
 
     /**
@@ -188,9 +227,9 @@ public class AdminHandler {
      * perform hibernate validation on the annotations of the RoeToggleRequest.
      * @return empty string, if validation passes, a joined error string containing all joined errors if not.
      */
-    private String validateHibernate(RoleToggleRequest roleToggleRequest) {
-        Errors errors = new BeanPropertyBindingResult(roleToggleRequest, RoleToggleRequest.class.getName());
-        validator.validate(roleToggleRequest, errors);
+    private <T> String validateHibernate(T request, Class<T> classOfRequest) {
+        Errors errors = new BeanPropertyBindingResult(request, classOfRequest.getName());
+        validator.validate(request, errors);
         return errors.hasErrors() ? errors.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage)
                 .collect(Collectors.joining(" && "))
                 : "";

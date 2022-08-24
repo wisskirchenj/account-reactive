@@ -24,7 +24,8 @@ public class SecurityEvent {
 
     @Id
     private long id;
-    private LocalDate date;
+    @Builder.Default()
+    private LocalDate date = LocalDate.now();
     private String action;
     private String subject;
     private String object;

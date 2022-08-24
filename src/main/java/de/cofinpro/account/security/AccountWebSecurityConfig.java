@@ -3,13 +3,12 @@ package de.cofinpro.account.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Mono;
+import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
+import org.springframework.security.web.server.authorization.ServerAccessDeniedHandler;
 
 /**
  * Spring WebFlux security configuration, that sets up the Security WebFilterChain with access information to
@@ -23,13 +22,14 @@ public class AccountWebSecurityConfig {
     @Bean
     @Autowired
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http,
-                                                            ReactiveAuthenticationManager authenticationManager) {
+                                                            ReactiveAuthenticationManager authenticationManager,
+                                                            ServerAccessDeniedHandler accessDeniedHandler,
+                                                            ServerAuthenticationEntryPoint authenticationEntryPoint) {
         http.csrf().disable()
                 .httpBasic(httpBasicSpec -> httpBasicSpec
                         .authenticationManager(authenticationManager)
                         // when moving next line to exceptionHandlingSpecs, get empty body 401 for authentication failures (e.g. Invalid Credentials)
-                        .authenticationEntryPoint((exchange, ex) ->
-                                Mono.error(new ResponseStatusException(HttpStatus.UNAUTHORIZED, ex.getMessage())))
+                        .authenticationEntryPoint(authenticationEntryPoint)
                 )
                 .authorizeExchange()
                 .pathMatchers("/api/auth/signup").permitAll()
@@ -44,8 +44,7 @@ public class AccountWebSecurityConfig {
                 .and()
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
                         // next line needed to have full error Json for 403 (instead of empty body)
-                        .accessDeniedHandler((exchange, denied) ->
-                                Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, denied.getMessage() + "!")))
+                        .accessDeniedHandler(accessDeniedHandler)
                 ).formLogin();
         return http.build();
     }

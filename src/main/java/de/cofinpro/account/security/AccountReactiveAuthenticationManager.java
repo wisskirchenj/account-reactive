@@ -1,7 +1,7 @@
 package de.cofinpro.account.security;
 
+import de.cofinpro.account.audit.BruteForceProtector;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
@@ -20,11 +20,14 @@ import static de.cofinpro.account.configuration.AuthenticationConfiguration.pass
 @Component
 public class AccountReactiveAuthenticationManager extends UserDetailsRepositoryReactiveAuthenticationManager {
 
+    private final BruteForceProtector bruteForceProtector;
+
     @Autowired
     public AccountReactiveAuthenticationManager(ReactiveUserDetailsService userDetailsService,
-                                                PasswordEncoder passwordEncoder) {
+                                                PasswordEncoder passwordEncoder, BruteForceProtector bruteForceProtector) {
         super(userDetailsService);
         setPasswordEncoder(passwordEncoder);
+        this.bruteForceProtector = bruteForceProtector;
     }
 
     /**
@@ -35,8 +38,12 @@ public class AccountReactiveAuthenticationManager extends UserDetailsRepositoryR
     @Override
     public Mono<Authentication> authenticate(Authentication authentication) {
         if (passwordIsHacked((String) authentication.getCredentials())) {
-            return Mono.error(new BadCredentialsException(PASSWORD_HACKED_ERRORMSG + " Please change!"));
+            return Mono.error(new AccountBadCredentialsException(PASSWORD_HACKED_ERRORMSG + " Please change!",
+                    authentication.getName()));
         }
-        return super.authenticate(authentication);
+        return super.authenticate(authentication)
+                .doOnSuccess(auth -> bruteForceProtector.resetLoginFailures(auth.getName()))
+                .onErrorMap(exception -> new AccountBadCredentialsException(exception.getMessage(),
+                        authentication.getName()));
     }
 }

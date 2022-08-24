@@ -1,10 +1,14 @@
 package de.cofinpro.account.admin;
 
 import de.cofinpro.account.audit.AuditLogger;
-import de.cofinpro.account.audit.LockUserToggleRequest;
 import de.cofinpro.account.authentication.SignupResponse;
 import de.cofinpro.account.domain.StatusResponse;
-import de.cofinpro.account.persistence.*;
+import de.cofinpro.account.persistence.Login;
+import de.cofinpro.account.persistence.LoginReactiveRepository;
+import de.cofinpro.account.persistence.LoginRole;
+import de.cofinpro.account.persistence.LoginRoleReactiveRepository;
+import de.cofinpro.account.persistence.Role;
+import de.cofinpro.account.persistence.SalaryReactiveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.data.domain.Sort;
@@ -77,15 +81,16 @@ public class AdminHandler {
         if (!email.matches(EMAIL_REGEX)) {
             return Mono.error(new ServerWebInputException("Invalid user email given: '" + email + "'!"));
         }
-        return ok().body(deleteUser(email), UserDeletedResponse.class);
+        return ok().body(deleteUser(email, request.principal()), UserDeletedResponse.class);
     }
 
     /**
      * validates if deletion is possible and deletes all user associated entries from database tables.
-     * @param email user's email key
+     *
+     * @param email     user's email key
      * @return error Mono if user not found or admin role requested for deletion, a success status response else.
      */
-    private Mono<UserDeletedResponse> deleteUser(String email) {
+    private Mono<UserDeletedResponse> deleteUser(String email, Mono<? extends Principal> principal) {
         return roleRepository.findRolesByEmail(email)
                 .flatMap(this::isAdmin)
                 .flatMap(isAdmin -> {
@@ -95,7 +100,9 @@ public class AdminHandler {
                         return roleRepository.deleteAllByEmail(email)
                                 .then(salaryRepository.deleteAllByEmail(email))
                                 .then(userRepository.deleteByEmail(email))
-                                .then(Mono.just(new UserDeletedResponse(email, DELETED_SUCCESSFULLY)));
+                                .then(principal)
+                                .flatMap(admin -> auditLogger.logDeleteUser(admin.getName(), email))
+                                .map(secEvent -> new UserDeletedResponse(email, DELETED_SUCCESSFULLY));
                     }
                 });
     }
@@ -129,10 +136,11 @@ public class AdminHandler {
      */
     public Mono<ServerResponse> toggleUserLock(ServerRequest request) {
         return request.bodyToMono(LockUserToggleRequest.class)
-                .flatMap(req -> ok().body(validateAndToggleLock(req), StatusResponse.class));
+                .flatMap(req -> ok().body(validateAndToggleLock(req, request.principal()), StatusResponse.class));
     }
 
-    private Mono<StatusResponse> validateAndToggleLock(LockUserToggleRequest lockToggleRequest) {
+    private Mono<StatusResponse> validateAndToggleLock(LockUserToggleRequest lockToggleRequest,
+                                                       Mono<? extends Principal> principal) {
         String hibernateValidationErrors = validateHibernate(lockToggleRequest, LockUserToggleRequest.class);
         if (!hibernateValidationErrors.isEmpty()) {
             return Mono.error(new ServerWebInputException(hibernateValidationErrors));
@@ -146,7 +154,9 @@ public class AdminHandler {
                     } else {
                         return userRepository
                                 .toggleLock(lockToggleRequest.user(), lockRequested)
-                                .map(savedUser -> new StatusResponse("User %s %sed!".formatted(savedUser.getEmail(),
+                                .then(principal)
+                                .flatMap(admin -> auditLogger.logToggleUserLock(admin.getName(), lockToggleRequest))
+                                .map(secEvent -> new StatusResponse("User %s %sed!".formatted(lockToggleRequest.user(),
                                         lockRequested ? "lock" : "unlock")));
                     }
                 });
@@ -224,7 +234,7 @@ public class AdminHandler {
     }
 
     /**
-     * perform hibernate validation on the annotations of the RoeToggleRequest.
+     * perform hibernate validation on the annotations of a generic type request.
      * @return empty string, if validation passes, a joined error string containing all joined errors if not.
      */
     private <T> String validateHibernate(T request, Class<T> classOfRequest) {

@@ -153,6 +153,7 @@ public class AuthenticationHandler {
                     } else {
                         user.setPassword(passwordEncoder.encode(newPassword));
                         return userRepository.save(user)
+                                .zipWith(auditLogger.logChangePassword(tuple.getT2().getName()), (login, event) -> login)
                                 .map(login -> new ChangepassResponse(login.getEmail(), PASSWORD_UPDATEMSG));
                     }});
     }

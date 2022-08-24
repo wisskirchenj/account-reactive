@@ -22,6 +22,7 @@ public class AdminConfiguration {
         return roles.findAll().collectList().block(Duration.ofMillis(300));
     }
 
+    public static final int LOGIN_FAILED_LIMIT = 5;
     public static final String ADMIN_ROLE = "ROLE_ADMINISTRATOR";
     public static final String DELETED_SUCCESSFULLY = "Deleted successfully!";
     public static final String USER_NOT_FOUND_ERRORMSG = "User not found!";

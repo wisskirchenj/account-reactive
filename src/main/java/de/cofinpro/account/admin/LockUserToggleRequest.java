@@ -1,4 +1,4 @@
-package de.cofinpro.account.audit;
+package de.cofinpro.account.admin;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;

@@ -16,6 +16,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.io.IOException;
 import java.util.List;
 
+import static de.cofinpro.account.AccountReactiveAuthenticationIT.signup;
 import static de.cofinpro.account.configuration.AccountConfiguration.*;
 import static org.hamcrest.Matchers.equalTo;
 
@@ -36,13 +37,13 @@ class AccountReactiveDomainIT {
     @BeforeEach
     void setup() {
         if (!usersSignedUp) {
-            signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
-            signup(new SignupRequest("Accountant", "role", "acct@acme.com", "acctacctacct"));
+            signup(webClient, new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+            signup(webClient, new SignupRequest("Accountant", "role", "acct@acme.com", "acctacctacct"));
             webClient.put().uri("/api/admin/user/role")
                     .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                     .bodyValue(new RoleToggleRequest("acct@acme.com", "ACCOUNTANT", "grant"))
                             .exchange().expectStatus().isOk();
-            signup(new SignupRequest("Pete", "Doe", "p.d@acme.com", "123456789012"));
+            signup(webClient, new SignupRequest("Pete", "Doe", "p.d@acme.com", "123456789012"));
             usersSignedUp = true;
         }
     }
@@ -92,8 +93,8 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenValidSalaryRequest_ThenOkAndStatusResponseReturned() {
-        signup(new SignupRequest("Alf", "Doe", "a.d@acme.com", "123456789012"));
-        signup(new SignupRequest("Gary", "Doe", "g.d@acme.com", "123456789012"));
+        signup(webClient, new SignupRequest("Alf", "Doe", "a.d@acme.com", "123456789012"));
+        signup(webClient, new SignupRequest("Gary", "Doe", "g.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
                 .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
@@ -170,7 +171,7 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenValidPutSalaryRequest_ThenOkAndStatusResponse() {
-        signup(new SignupRequest("Hans", "Doe", "h.d@acme.com", "123456789012"));
+        signup(webClient, new SignupRequest("Hans", "Doe", "h.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
                 .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
@@ -191,7 +192,7 @@ class AccountReactiveDomainIT {
 
     @Test
     void whenGetPayment_ThenSalaryResponseReturned() {
-        signup(new SignupRequest("Jan", "Doe", "j.d@acme.com", "123456789012"));
+        signup(webClient, new SignupRequest("Jan", "Doe", "j.d@acme.com", "123456789012"));
         webClient.post().uri("/api/acct/payments")
                 .headers(headers -> headers.setBasicAuth("acct@acme.com", "acctacctacct"))
                 .bodyValue(List.of(
@@ -229,12 +230,5 @@ class AccountReactiveDomainIT {
                 .expectBody()
                 .jsonPath("$.message")
                 .value(equalTo("Wrong Date: Use mm-yyyy format!"));
-    }
-
-    void signup(SignupRequest request) {
-        webClient.post().uri("/api/auth/signup")
-                .bodyValue(request)
-                .exchange()
-                .expectStatus().isOk();
     }
 }

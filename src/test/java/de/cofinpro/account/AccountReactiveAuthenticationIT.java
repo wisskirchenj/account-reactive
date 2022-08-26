@@ -52,7 +52,7 @@ class AccountReactiveAuthenticationIT {
     @BeforeEach
     void setup() {
         if (!adminSignedUp) {
-            signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+            signup(webClient, new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
             adminSignedUp = true;
         }
     }
@@ -87,7 +87,7 @@ class AccountReactiveAuthenticationIT {
 
     @Test
     void whenSignupTwiceSameEmailIgnoreCase_ThenUserExistsReturned() {
-        signup(new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret"));
+        signup(webClient, new SignupRequest("Peter", "John", "p.john@acme.com", "secretsecret"));
         webClient.post().uri("/api/auth/signup")
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new SignupRequest("Peter2", "John", "P.JOHN@acme.com", "secretsecret"))
@@ -98,7 +98,7 @@ class AccountReactiveAuthenticationIT {
 
     @Test
     void whenAuthorizedUserGetsPayment_ThenOkAndEmptyRecordReturned() {
-        signup(new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"));
+        signup(webClient, new SignupRequest("Hans", "Schmitz", "h.schmitz@acme.com", "secretsecret"));
         webClient.get().uri("/api/empl/payment")
                 .headers(headers -> headers.setBasicAuth("h.schmitz@acme.com", "secretsecret"))
                 .exchange()
@@ -130,7 +130,7 @@ class AccountReactiveAuthenticationIT {
 
     @Test
     void whenSignedUpUserGetsPaymentBadCredentials_Then401Returned() {
-        signup(new SignupRequest("Ulrich", "Weiss", "uweiss@acme.com", "secretsecret"));
+        signup(webClient, new SignupRequest("Ulrich", "Weiss", "uweiss@acme.com", "secretsecret"));
         webClient.get().uri("/api/empl/payment")
                 .headers(headers -> headers.setBasicAuth("uweiss@acme.com", "secret_secret"))
                 .exchange()
@@ -177,7 +177,7 @@ class AccountReactiveAuthenticationIT {
 
     @Test
     void stage3_example3And4AndFurtherErrors() {
-        signup(new SignupRequest("John", "Doe", "johnDoe@acme.com", "123456123456"));
+        signup(webClient, new SignupRequest("John", "Doe", "johnDoe@acme.com", "123456123456"));
         webClient.post().uri("/api/auth/changepass")
                 .headers(headers -> headers.setBasicAuth("johnDoe@acme.com", "123456123456"))
                 .bodyValue(new ChangepassRequest("bZPGqH7fW"))
@@ -212,7 +212,7 @@ class AccountReactiveAuthenticationIT {
                         "\", \"path\": \"/api/auth/changepass\"}");
     }
 
-    void signup(SignupRequest request) {
+    static void signup(WebTestClient webClient, SignupRequest request) {
         webClient.post().uri("/api/auth/signup")
                 .bodyValue(request)
                 .exchange()

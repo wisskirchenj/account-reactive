@@ -48,13 +48,13 @@ period must in this case be existent in the database to get updated.
 > <b>GET /api/empl/payment (authorized - Roles USER & ACCOUNTANT - with request query parameter "period")</b> -> gives an authenticated user
 access to his payroll data - either all when leaving out the period-parameter - or for the parameterized month.
 
-> <b>GET /api/admin/user (authorized - Roles ADMINISTRATOR)</b> -> list all user data records with id, roles
+> <b>GET /api/admin/user (authorized - Role ADMINISTRATOR)</b> -> list all user data records with id, roles
 and name, email information.
 
-> <b>DELETE /api/admin/user (authorized - Roles ADMINISTRATOR - with path parameter "email")</b> -> delete the specified
+> <b>DELETE /api/admin/user (authorized - Role ADMINISTRATOR - with path parameter "email")</b> -> delete the specified
 user together with all her roles and salary information. Admin cannot delete himself from the system.
 
-> <b>PUT /api/admin/user/role (authorized - Roles ADMINISTRATOR)</b> -> toggles (Grant/Revoke) a role to
+> <b>PUT /api/admin/user/role (authorized - Role ADMINISTRATOR)</b> -> toggles (Grant/Revoke) a role to
 a specified user - consumes Json RoleToggleRequest:<pre>
 {
     "user": "p.s@acme.COM",
@@ -63,7 +63,20 @@ a specified user - consumes Json RoleToggleRequest:<pre>
 }</pre> It is also not allowed to assign "USER" or "ACCOUNTANT" to the "ADMINISTRATOR", nor is it allowed
 to delete the last role remaining from a user.
 
-[//]: # (Project was completed on xx.0d.22.)
+
+> <b>PUT /api/admin/user/access (authorized - Role ADMINISTRATOR)</b> -> locks or unlocks a user - 
+consumes Json LockUserToggleRequest:<pre>
+{
+    "user": "p.s@acme.COM",
+    "operation": "lock"    (or "unlock")
+}</pre> It is not allowed to lock the "ADMINISTRATOR".
+
+
+> <b>GET /api/security/events (authorized - Role AUDITOR)</b> -> list all recorded security events for failed
+or unathorized logins, all admin activities, signups, change passwords and brute force locking after 5 failed attempts.
+and name, email information.
+
+## Project was completed on 26.08.22.
 
 ## Repository Contents
 
@@ -86,4 +99,10 @@ full functionality. Flux publishers used and many interisting reactor operators.
 
 16.08.22 Stage 5 completed - authorization role concept and admin endpoints added. Used .then() Publisher-operator
 for Mono<Void> returning delete-repo methods.
+
+24.08.22 Stage 6 completed - persistent security logging implemented, save login failures and programtically lock a
+user after 5 failed login attempts, reset failedLogins on successful login. Implement admin lock/unlock user endpoint.
+new AUDITOR role authorizing new endpoint /api/security/events.
+
+26.08.22 Final Stage 7 completed - switch to https-communication (i.e. TLS) with self-generated certificate via keytool
 

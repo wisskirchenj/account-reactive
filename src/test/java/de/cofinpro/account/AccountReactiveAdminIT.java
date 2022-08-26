@@ -1,5 +1,6 @@
 package de.cofinpro.account;
 
+import de.cofinpro.account.admin.LockUserToggleRequest;
 import de.cofinpro.account.admin.RoleToggleRequest;
 import de.cofinpro.account.admin.UserDeletedResponse;
 import de.cofinpro.account.authentication.SignupRequest;
@@ -15,6 +16,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.io.IOException;
 import java.util.List;
 
+import static de.cofinpro.account.AccountReactiveAuthenticationIT.signup;
 import static de.cofinpro.account.configuration.AdminConfiguration.*;
 import static org.hamcrest.Matchers.*;
 
@@ -35,8 +37,8 @@ class AccountReactiveAdminIT {
     @BeforeEach
     void setup() {
         if (!usersSignedUp) {
-            signup(new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
-            signup(new SignupRequest("Hans", "Wurst", "hw@acme.com", "useruseruser"));
+            signup(webClient, new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
+            signup(webClient, new SignupRequest("Hans", "Wurst", "hw@acme.com", "useruseruser"));
             usersSignedUp = true;
         }
     }
@@ -81,7 +83,7 @@ class AccountReactiveAdminIT {
 
     @Test
     void whenAdminAuthenticatedDeleteUser_ThenOkAndDeleteStatusReturned() {
-        signup(new SignupRequest("Anton", "Wurst", "aw@acme.com", "useruseruser"));
+        signup(webClient, new SignupRequest("Anton", "Wurst", "aw@acme.com", "useruseruser"));
         webClient.delete().uri("/api/admin/user/aw@acme.com")
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                 .exchange()
@@ -213,7 +215,7 @@ class AccountReactiveAdminIT {
 
     @Test
     void whenPutRoleValid_Then200AndRolesReturned() {
-        signup(new SignupRequest("Anton", "A", "a@acme.com", "useruseruser"));
+        signup(webClient, new SignupRequest("Anton", "A", "a@acme.com", "useruseruser"));
         webClient.put().uri("/api/admin/user/role")
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                 .bodyValue(new RoleToggleRequest("a@acme.com", "accountant", "GRANT"))
@@ -229,10 +231,37 @@ class AccountReactiveAdminIT {
                 .value(SignupResponse::roles, equalTo(List.of("ROLE_USER")));
     }
 
-    void signup(SignupRequest request) {
-        webClient.post().uri("/api/auth/signup")
-                .bodyValue(request)
-                .exchange()
-                .expectStatus().isOk();
+    @Test
+    void whenPutLockAdministrator_Then400() {
+        webClient.put().uri("/api/admin/user/access")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new LockUserToggleRequest("admin@acme.com", "lock"))
+                .exchange().expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo(CANT_LOCK_ADMIN_ERRORMSG));
+    }
+
+    @Test
+    void whenPutLockAndUnlockUser_Then200AndUserLockedAndUnlocked() {
+        webClient.put().uri("/api/admin/user/access")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new LockUserToggleRequest("hw@acme.com", "lock"))
+                .exchange().expectStatus().isOk()
+                .expectBody()
+                .json("{\"status\": \"User hw@acme.com locked!\"}");
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .exchange().expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.message").value(equalTo("User account is locked"));
+        webClient.put().uri("/api/admin/user/access")
+                .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
+                .bodyValue(new LockUserToggleRequest("hw@acme.com", "unlock"))
+                .exchange().expectStatus().isOk()
+                .expectBody()
+                .json("{\"status\": \"User hw@acme.com unlocked!\"}");
+        webClient.get().uri("/api/empl/payment")
+                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .exchange().expectStatus().isOk();
     }
 }

@@ -86,7 +86,7 @@ public class AdminHandler {
 
     /**
      * validates if deletion is possible and deletes all user associated entries from database tables.
-     *
+     * logs delete_user security event
      * @param email     user's email key
      * @return error Mono if user not found or admin role requested for deletion, a success status response else.
      */
@@ -139,6 +139,11 @@ public class AdminHandler {
                 .flatMap(req -> ok().body(validateAndToggleLock(req, request.principal()), StatusResponse.class));
     }
 
+    /**
+     * hibernate validates the request and locks a user, if found and not admin.
+     * @param lockToggleRequest json with all information to process
+     * @return the StatusResponse Mono or error mono (400 or 404) in case of fail.
+     */
     private Mono<StatusResponse> validateAndToggleLock(LockUserToggleRequest lockToggleRequest,
                                                        Mono<? extends Principal> principal) {
         String hibernateValidationErrors = validateHibernate(lockToggleRequest, LockUserToggleRequest.class);
@@ -165,8 +170,7 @@ public class AdminHandler {
     /**
      * hibernate validation, a role existence check vs the Roles-Table in the database and diverse
      * rule checks are applied. If everything passes, the role is toggled for the specified user (granted
-     * or revoked) and a complete user SignupResponse is returned.
-     *
+     * or revoked) and a complete user SignupResponse is returned. Security log of toggle role.
      * @param roleToggleRequest json with all information to process
      * @return the SignupResponse Mono or error mono (400 or 404) for various rule faíls.
      */

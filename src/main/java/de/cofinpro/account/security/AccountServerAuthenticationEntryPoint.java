@@ -10,6 +10,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+/**
+ * error handling component for the authentication failures on authenticated endpoints.
+ */
 @Component
 public class AccountServerAuthenticationEntryPoint implements ServerAuthenticationEntryPoint {
 
@@ -20,6 +23,10 @@ public class AccountServerAuthenticationEntryPoint implements ServerAuthenticati
         this.bruteForceProtector = bruteForceProtector;
     }
 
+    /**
+     * overridden method to return a custom json exception and do security logging if a username was given
+     * as authentication.
+     */
     @Override
     public Mono<Void> commence(ServerWebExchange exchange, AuthenticationException ex) {
         if (ex instanceof AccountBadCredentialsException exception) {

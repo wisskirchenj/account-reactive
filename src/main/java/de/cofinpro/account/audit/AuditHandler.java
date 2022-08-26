@@ -11,8 +11,7 @@ import reactor.core.publisher.Mono;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 /**
- * service layer handler class for all audit specific endpoints /api/admin/user (GET, DELETE) and
- * /api/admin/user/role (PUT).
+ * service layer handler class for all audit specific endpoints: /api/security/events (GET).
  */
 @Service
 public class AuditHandler {

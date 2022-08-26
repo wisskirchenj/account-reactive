@@ -52,6 +52,10 @@ public class RoutingConfiguration {
                 .build();
     }
 
+    /**
+     * route handling for the admin specific routes
+     * @param adminHandler handler
+     */
     private RouterFunction<ServerResponse> adminRoutes(AdminHandler adminHandler) {
         return route()
                 .GET("/api/admin/user", adminHandler::displayUsers)

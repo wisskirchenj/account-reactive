@@ -10,6 +10,9 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+/**
+ * handler for 403 errors with missing role for authorized endpoints
+ */
 @Component
 public class AccountServerAccessDeniedHandler implements ServerAccessDeniedHandler {
 
@@ -20,6 +23,9 @@ public class AccountServerAccessDeniedHandler implements ServerAccessDeniedHandl
         this.auditLogger = auditLogger;
     }
 
+    /**
+     * do a security event log for access denied cases with the user name and throw a custom json exception.
+     */
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, AccessDeniedException denied) {
         return exchange.getPrincipal()

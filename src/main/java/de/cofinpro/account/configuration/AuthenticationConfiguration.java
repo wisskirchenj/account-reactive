@@ -50,7 +50,7 @@ public class AuthenticationConfiguration {
             "PasswordForMarch", "PasswordForApril", "PasswordForMay", "PasswordForJune", "PasswordForJuly", "PasswordForAugust",
             "PasswordForSeptember", "PasswordForOctober", "PasswordForNovember", "PasswordForDecember");
 
-    public static final int BCRYPT_STRENGTH = 13;
+    public static final int BCRYPT_STRENGTH = 7;
 
     public static final int MIN_PASSWORD_LENGTH = 12;
 

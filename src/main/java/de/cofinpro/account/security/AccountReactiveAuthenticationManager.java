@@ -32,6 +32,8 @@ public class AccountReactiveAuthenticationManager extends UserDetailsRepositoryR
 
     /**
      * overridden authenticate method, that pre-applies the check if the given password was hacked.
+     * Also it maps errors to a custom exception that carries the user for audit logging and on
+     * successful login resets the failedLogin field in the user's Login database record.
      * @param authentication the {@link Authentication} to test
      * @return error Mono requesting the user to change password if check fails, default return of super.authenticate() else.
      */

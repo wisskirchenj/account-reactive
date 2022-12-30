@@ -130,7 +130,7 @@ class AccountReactiveAuditIT {
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "CHANGE_PASSWORD".equals(resp.action())).findFirst()
-                        .get().subject(), equalTo("ac@acme.com"));
+                        .orElseThrow().subject(), equalTo("ac@acme.com"));
     }
 
     @Test
@@ -145,10 +145,10 @@ class AccountReactiveAuditIT {
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "ACCESS_DENIED".equals(resp.action())).findFirst()
-                        .get().subject(), equalTo("admin@acme.com"))
+                        .orElseThrow().subject(), equalTo("admin@acme.com"))
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "ACCESS_DENIED".equals(resp.action())).findFirst()
-                        .get().path(), equalTo("/api/empl/payment"));
+                        .orElseThrow().path(), equalTo("/api/empl/payment"));
     }
 
     @Test
@@ -164,13 +164,13 @@ class AccountReactiveAuditIT {
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "BRUTE_FORCE".equals(resp.action())).findFirst()
-                        .get().subject(), equalTo("ad@acme.com"))
+                        .orElseThrow().subject(), equalTo("ad@acme.com"))
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "LOCK_USER".equals(resp.action())).findFirst()
-                        .get().subject(), equalTo("ad@acme.com"))
+                        .orElseThrow().subject(), equalTo("ad@acme.com"))
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "LOCK_USER".equals(resp.action())).findFirst()
-                        .get().object(), equalTo("Lock user ad@acme.com"));
+                        .orElseThrow().object(), equalTo("Lock user ad@acme.com"));
     }
 
     @Test
@@ -191,7 +191,7 @@ class AccountReactiveAuditIT {
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "UNLOCK_USER".equals(resp.action())).findFirst()
-                        .get().object(), equalTo("Unlock user ae@acme.com"));
+                        .orElseThrow().object(), equalTo("Unlock user ae@acme.com"));
     }
 
     void giveAuditorRole() {

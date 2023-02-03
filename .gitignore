@@ -5,6 +5,8 @@ out/
 *.iws
 *.iml
 *.ipr
+*.db
+*.p12
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -15,3 +17,4 @@ out/
 
 ### Mac OS ###
 .DS_Store
+HELP.MD

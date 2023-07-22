@@ -23,7 +23,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static de.cofinpro.account.configuration.AccountConfiguration.*;
+import static de.cofinpro.account.configuration.AccountConfiguration.ADDED_SUCCESSFULLY;
+import static de.cofinpro.account.configuration.AccountConfiguration.DUPLICATE_RECORDS_ERRORMSG;
+import static de.cofinpro.account.configuration.AccountConfiguration.NO_SUCH_EMPLOYEE_ERRORMSG;
+import static de.cofinpro.account.configuration.AccountConfiguration.NO_SUCH_SALES_RECORD_ERRORMSG;
+import static de.cofinpro.account.configuration.AccountConfiguration.PERIOD_REGEX;
+import static de.cofinpro.account.configuration.AccountConfiguration.RECORDMSG_START;
+import static de.cofinpro.account.configuration.AccountConfiguration.RECORD_ALREADY_EXISTS_ERRORMSG;
+import static de.cofinpro.account.configuration.AccountConfiguration.UPDATED_SUCCESSFULLY;
+import static de.cofinpro.account.configuration.ObservabilityConfiguration.extractAndLog;
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static java.util.function.Predicate.not;
@@ -58,12 +66,16 @@ public class AccountHandler {
      */
     public Mono<ServerResponse> accessPayrolls(ServerRequest request) {
         Optional<String> searchPeriod = request.queryParam("period");
+        log.info("access payrolls {}", searchPeriod.isPresent()
+                ? "(period = %s)".formatted(searchPeriod.get())
+                : "without search period");
         if (searchPeriod.isPresent() && !searchPeriod.get().matches(PERIOD_REGEX)) {
             return Mono.error(new ServerWebInputException("Wrong Date: Use mm-yyyy format!"));
         }
         return request.principal()
                 .flatMap(principal -> ok().body(selectSalaries(principal.getName(), searchPeriod),
-                new ParameterizedTypeReference<>(){}));
+                        new ParameterizedTypeReference<>() {
+                        }));
     }
 
     /**
@@ -91,7 +103,7 @@ public class AccountHandler {
      * @return ServerResponse Mono with a success status or Error Mono if validation went wrong or data to update not found
      */
     public Mono<ServerResponse> changePayrolls(ServerRequest request) {
-        return request.bodyToMono(SalaryRecord.class)
+        return extractAndLog(request, SalaryRecord.class)
                 .flatMap(salaryRecord -> ok().body(validateAndUpdate(salaryRecord), StatusResponse.class));
     }
 
@@ -126,6 +138,7 @@ public class AccountHandler {
      */
     @Transactional
     public Mono<ServerResponse> uploadPayrolls(ServerRequest request) {
+        log.info("post request to add payroll");
         return request.bodyToFlux(SalaryRecord.class)
                 .index().flatMap(this::validateAll)
                 .collectList()

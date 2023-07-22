@@ -12,17 +12,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
-import org.springframework.validation.Validator;
 import reactor.util.function.Tuple2;
 
 import java.security.Principal;
 import java.util.List;
 
-import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.MIN_PASSWORD_LENGTH;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_HACKED_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_TOO_SHORT_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_UPDATEMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.SAME_PASSWORD_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.USER_EXISTS_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.passwordIsHacked;
+import static de.cofinpro.account.configuration.ObservabilityConfiguration.extractAndLog;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
 /**
@@ -58,7 +65,7 @@ public class AuthenticationHandler {
      */
     @Transactional
     public Mono<ServerResponse> signup(ServerRequest request) {
-        return request.bodyToMono(SignupRequest.class)
+        return extractAndLog(request, SignupRequest.class)
                 .zipWith(userRepository.count())
                 .flatMap(tuple -> ok().body(validateAndSave(tuple), SignupResponse.class));
     }
@@ -131,7 +138,7 @@ public class AuthenticationHandler {
      * @return a ChangepassResponse Json (200) as body of a ServerResponse or a 400 if validation error or same password
      */
     public Mono<ServerResponse> changePassword(ServerRequest request) {
-        return request.bodyToMono(ChangepassRequest.class)
+        return extractAndLog(request, ChangepassRequest.class)
                 .zipWith(request.principal())
                 .flatMap(tuple -> ok().body(validateAndChangepass(tuple), ChangepassResponse.class));
     }
@@ -146,6 +153,7 @@ public class AuthenticationHandler {
         final String newPassword = tuple.getT1().newPassword();
         String passwordValidationError = validatePassword(newPassword);
         if (!passwordValidationError.isEmpty()) {
+            log.warn("password validation failed!");
             return Mono.error(new ServerWebInputException(passwordValidationError));
         }
         return userRepository.findByEmailIgnoreCase(tuple.getT2().getName())

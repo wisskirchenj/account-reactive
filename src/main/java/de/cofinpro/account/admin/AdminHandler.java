@@ -9,6 +9,7 @@ import de.cofinpro.account.persistence.LoginRole;
 import de.cofinpro.account.persistence.LoginRoleReactiveRepository;
 import de.cofinpro.account.persistence.Role;
 import de.cofinpro.account.persistence.SalaryReactiveRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
@@ -29,8 +30,18 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static de.cofinpro.account.configuration.AdminConfiguration.*;
+import static de.cofinpro.account.configuration.AdminConfiguration.ADMIN_ROLE;
+import static de.cofinpro.account.configuration.AdminConfiguration.CANT_DELETE_ADMIN_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.CANT_LOCK_ADMIN_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.DELETED_SUCCESSFULLY;
+import static de.cofinpro.account.configuration.AdminConfiguration.INVALID_ROLE_COMBINE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.ROLE_NOT_FOUND_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_HASNT_ROLE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_HAS_ROLE_ALREADY_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_NEEDS_ROLE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_NOT_FOUND_ERRORMSG;
 import static de.cofinpro.account.configuration.AuthenticationConfiguration.EMAIL_REGEX;
+import static de.cofinpro.account.configuration.ObservabilityConfiguration.extractAndLog;
 import static java.lang.Boolean.TRUE;
 import static org.springframework.web.reactive.function.server.ServerResponse.ok;
 
@@ -39,6 +50,7 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
  * /api/admin/user/{role, access} (PUT).
  */
 @Service
+@Slf4j
 @DependsOn({"r2dbcScriptDatabaseInitializer"})
 public class AdminHandler {
 
@@ -68,6 +80,7 @@ public class AdminHandler {
      * GET /api/admin/user endpoint to display all users ascending by id with their roles, which are zipped to the Login.
      */
     public Mono<ServerResponse> displayUsers(ServerRequest ignoredServerRequest) {
+        log.info("display users request received");
         return ok().body(userRepository.findAll(Sort.by(Sort.Direction.ASC, "id"))
                         .flatMap(login -> Mono.just(login)
                                 .zipWith(roleRepository.findRolesByEmail(login.getEmail()), Login::setRoles))
@@ -81,6 +94,7 @@ public class AdminHandler {
      */
     public Mono<ServerResponse> deleteUser(ServerRequest request) {
         String email = request.pathVariable("email");
+        log.info("delete user '{}' request received", email);
         if (!email.matches(EMAIL_REGEX)) {
             return Mono.error(new ServerWebInputException("Invalid user email given: '" + email + "'!"));
         }
@@ -128,9 +142,9 @@ public class AdminHandler {
      * which role to toggle for which user.
      */
     public Mono<ServerResponse> toggleRole(ServerRequest request) {
-        return request.bodyToMono(RoleToggleRequest.class)
-                        .flatMap(req -> ok().body(validateAndToggleRole(req, request.principal()),
-                                SignupResponse.class));
+        return extractAndLog(request, RoleToggleRequest.class)
+                .flatMap(req -> ok().body(validateAndToggleRole(req, request.principal()),
+                        SignupResponse.class));
     }
 
     /**
@@ -138,7 +152,7 @@ public class AdminHandler {
      * which user to lock or unlock.
      */
     public Mono<ServerResponse> toggleUserLock(ServerRequest request) {
-        return request.bodyToMono(LockUserToggleRequest.class)
+        return extractAndLog(request, LockUserToggleRequest.class)
                 .flatMap(req -> ok().body(validateAndToggleLock(req, request.principal()), StatusResponse.class));
     }
 

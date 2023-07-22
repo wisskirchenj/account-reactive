@@ -26,7 +26,7 @@ public class AuthenticationConfiguration {
     @Bean
     public ReactiveUserDetailsService userDetailsService(LoginReactiveRepository users,
                                                          LoginRoleReactiveRepository roles) {
-        return email -> users.findByEmail(email)
+        return email -> users.findByEmailIgnoreCase(email)
                 .zipWith(roles.findRolesByEmail(email), Login::setRoles);
     }
 

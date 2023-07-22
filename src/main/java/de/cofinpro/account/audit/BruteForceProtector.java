@@ -27,7 +27,7 @@ public class BruteForceProtector {
      * method that handles a failed login of a user given by email and the requested path where failure took place
      */
     public Mono<SecurityEvent> handleLoginFail(String email, String path) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailIgnoreCase(email)
                 .defaultIfEmpty(Login.unknown())
                 .flatMap(login -> checkFailedAttemptsAndHandle(login, path));
     }
@@ -37,7 +37,7 @@ public class BruteForceProtector {
      * resets a users failed login attempts in the database
      */
     public void resetLoginFailures(String email) {
-        userRepository.findByEmail(email)
+        userRepository.findByEmailIgnoreCase(email)
                 .flatMap(login -> userRepository.save(login.setFailedLogins(0)))
                 .subscribe();
     }

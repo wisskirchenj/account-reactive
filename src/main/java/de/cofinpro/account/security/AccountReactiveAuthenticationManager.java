@@ -24,7 +24,8 @@ public class AccountReactiveAuthenticationManager extends UserDetailsRepositoryR
 
     @Autowired
     public AccountReactiveAuthenticationManager(ReactiveUserDetailsService userDetailsService,
-                                                PasswordEncoder passwordEncoder, BruteForceProtector bruteForceProtector) {
+                                                PasswordEncoder passwordEncoder,
+                                                BruteForceProtector bruteForceProtector) {
         super(userDetailsService);
         setPasswordEncoder(passwordEncoder);
         this.bruteForceProtector = bruteForceProtector;

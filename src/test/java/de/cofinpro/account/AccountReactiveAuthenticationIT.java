@@ -7,7 +7,6 @@ import de.cofinpro.account.authentication.SignupResponse;
 import de.cofinpro.account.domain.SalaryRecord;
 import de.cofinpro.account.persistence.Login;
 import de.cofinpro.account.persistence.LoginReactiveRepository;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,16 +17,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
-import static de.cofinpro.account.configuration.AuthenticationConfiguration.*;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_HACKED_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_TOO_SHORT_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.PASSWORD_UPDATEMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.SAME_PASSWORD_ERRORMSG;
+import static de.cofinpro.account.configuration.AuthenticationConfiguration.USER_EXISTS_ERRORMSG;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@SpringBootTest(properties = { "spring.r2dbc.url=r2dbc:h2:file://././src/test/resources/data/auth_test_db" })
+@SpringBootTest
 @AutoConfigureWebTestClient
 class AccountReactiveAuthenticationIT {
 
@@ -40,14 +40,7 @@ class AccountReactiveAuthenticationIT {
     @Autowired
     PasswordEncoder passwordEncoder;
 
-    static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/auth_test_db.mv.db");
     static boolean adminSignedUp = false;
-
-    @BeforeAll
-    static void dbSetup() throws IOException {
-        Files.deleteIfExists(TEST_DB_PATH);
-        Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
-    }
 
     @BeforeEach
     void setup() {
@@ -215,7 +208,6 @@ class AccountReactiveAuthenticationIT {
     static void signup(WebTestClient webClient, SignupRequest request) {
         webClient.post().uri("/api/auth/signup")
                 .bodyValue(request)
-                .exchange()
-                .expectStatus().isOk();
+                .exchange();
     }
 }

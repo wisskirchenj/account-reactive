@@ -12,9 +12,9 @@ import reactor.core.publisher.Mono;
 public interface LoginReactiveRepository extends ReactiveSortingRepository<Login, Long>,
         ReactiveCrudRepository<Login, Long> {
 
-    Mono<Login> findByEmail(String email);
+    Mono<Login> findByEmailIgnoreCase(String email);
 
-    Mono<Void> deleteByEmail(String email);
+    Mono<Void> deleteByEmailIgnoreCase(String email);
 
     /**
      * lock or unlock a user n the system and reset the failed logins to 0.
@@ -23,7 +23,7 @@ public interface LoginReactiveRepository extends ReactiveSortingRepository<Login
      * @return the save result
      */
     default Mono<Login> toggleLock(String email, boolean lockRequested) {
-        return findByEmail(email)
+        return findByEmailIgnoreCase(email)
                 .map(login -> login.setAccountLocked(lockRequested).setFailedLogins(0))
                 .flatMap(this::save);
     }

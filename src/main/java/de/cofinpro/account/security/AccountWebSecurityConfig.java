@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -25,27 +26,26 @@ public class AccountWebSecurityConfig {
                                                             ReactiveAuthenticationManager authenticationManager,
                                                             ServerAccessDeniedHandler accessDeniedHandler,
                                                             ServerAuthenticationEntryPoint authenticationEntryPoint) {
-        http.csrf().disable()
+        return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .httpBasic(httpBasicSpec -> httpBasicSpec
                         .authenticationManager(authenticationManager)
                         // when moving next line to exceptionHandlingSpecs, get empty body 401 for authentication failures (e.g. Invalid Credentials)
-                        .authenticationEntryPoint(authenticationEntryPoint)
-                )
-                .authorizeExchange()
-                .pathMatchers("/api/auth/signup").permitAll()
-                .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()
-                // without next line: accessDeniedHandler not working for POST (i.e. CSRF-relevant calls)
-                .pathMatchers("/error", "/error/**").permitAll()
-                .pathMatchers("/api/security/**").hasRole("AUDITOR")
-                .pathMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
-                .pathMatchers("/api/acct/**").hasRole("ACCOUNTANT")
-                .pathMatchers(HttpMethod.GET, "/api/empl/payment").hasAnyRole("ACCOUNTANT", "USER")
-                .pathMatchers("/api/**").authenticated()
-                .and()
+                        .authenticationEntryPoint(authenticationEntryPoint))
+                .authorizeExchange(auth -> auth
+                        .pathMatchers("/api/auth/signup").permitAll()
+                        .pathMatchers(HttpMethod.GET,"/actuator", "/actuator/**").permitAll()
+                        // without next line: accessDeniedHandler not working for POST (i.e. CSRF-relevant calls)
+                        .pathMatchers("/error", "/error/**").permitAll()
+                        .pathMatchers("/api/security/**").hasRole("AUDITOR")
+                        .pathMatchers("/api/admin/**").hasRole("ADMINISTRATOR")
+                        .pathMatchers("/api/acct/**").hasRole("ACCOUNTANT")
+                        .pathMatchers(HttpMethod.GET, "/api/empl/payment").hasAnyRole("ACCOUNTANT", "USER")
+                        .pathMatchers("/api/**").authenticated())
                 .exceptionHandling(exceptionHandlingSpec -> exceptionHandlingSpec
                         // next line needed to have full error Json for 403 (instead of empty body)
-                        .accessDeniedHandler(accessDeniedHandler)
-                ).formLogin();
-        return http.build();
+                        .accessDeniedHandler(accessDeniedHandler))
+                .formLogin(Customizer.withDefaults())
+                .build();
     }
 }

@@ -73,7 +73,7 @@ public class AccountHandler {
      * @return Mono holding the result as list of SalaryResponse object to be presented to the user
      */
     private Mono<List<SalaryResponse>> selectSalaries(String email, Optional<String> searchPeriod) {
-            return userRepository.findByEmail(email).ofType(Login.class)
+            return userRepository.findByEmailIgnoreCase(email).ofType(Login.class)
                     .flatMap(login -> searchPeriod.map(month -> salaryRepository
                             .findByEmployeeAndPeriod(email, Salary.yearFirst(month))
                             .map(salary -> List.of(SalaryResponse.fromLoginAndSalary(salary, login)))
@@ -172,7 +172,7 @@ public class AccountHandler {
      * @return Mono with an empty String if validation passes - with error message else
      */
     private Mono<String> validateWithDatabase(long recordId, SalaryRecord salaryRecord) {
-        return userRepository.findByEmail(salaryRecord.employee())
+        return userRepository.findByEmailIgnoreCase(salaryRecord.employee())
                 .hasElement()
                 .flatMap(hasUserElement -> {
                     if (FALSE.equals(hasUserElement)) {

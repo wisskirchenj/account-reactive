@@ -5,7 +5,6 @@ import de.cofinpro.account.admin.RoleToggleRequest;
 import de.cofinpro.account.audit.AuditEventResponse;
 import de.cofinpro.account.authentication.ChangepassRequest;
 import de.cofinpro.account.authentication.SignupRequest;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,16 +12,14 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
 import static de.cofinpro.account.AccountReactiveAuthenticationIT.signup;
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.notNullValue;
 
-@SpringBootTest(properties = { "spring.r2dbc.url=r2dbc:h2:file://././src/test/resources/data/audit_test_db" })
+@SpringBootTest()
 @AutoConfigureWebTestClient
 class AccountReactiveAuditIT {
 
@@ -31,19 +28,11 @@ class AccountReactiveAuditIT {
     @Autowired
     WebTestClient webClient;
 
-    static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/audit_test_db.mv.db");
-
-    @BeforeAll
-    static void dbSetup() throws IOException {
-        Files.deleteIfExists(TEST_DB_PATH);
-        Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
-    }
-
     @BeforeEach
     void setup() {
         if (!usersSignedUp) {
             signup(webClient, new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
-            signup(webClient, new SignupRequest("Hans", "Wurst", "hw@acme.com", "useruseruser"));
+            signup(webClient, new SignupRequest("Hans", "Wurst", "hw2@acme.com", "useruseruser"));
             usersSignedUp = true;
         }
     }
@@ -52,7 +41,7 @@ class AccountReactiveAuditIT {
     void whenSignup_CreateUserLogged() {
         giveAuditorRole();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> list[0].action(), equalTo("CREATE_USER"))
@@ -60,43 +49,39 @@ class AccountReactiveAuditIT {
                 .value(list -> list[0].subject(), equalTo("Anonymous"))
                 .value(list -> list[0].object(), equalTo("admin@acme.com"))
                 .value(list -> list[0].path(), equalTo("/api/auth/signup"))
-                .value(list -> list[1].action(), equalTo("CREATE_USER"))
-                .value(list -> list[1].id(), equalTo(2L))
-                .value(list -> list[1].subject(), equalTo("Anonymous"))
-                .value(list -> list[1].object(), equalTo("hw@acme.com"))
-                .value(list -> list[1].path(), equalTo("/api/auth/signup"));
+                .value(list -> list[1].action(), equalTo("CREATE_USER"));
     }
 
     @Test
     void whenGrantRemoveRole_GrantRemoveRoleLogged() {
         giveAuditorRole();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list).map(AuditEventResponse::object)
-                        .anyMatch("Grant role AUDITOR to hw@acme.com"::equals), equalTo(true));
+                        .anyMatch("Grant role AUDITOR to hw2@acme.com"::equals), equalTo(true));
         webClient.put().uri("/api/admin/user/role")
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
-                .bodyValue(new RoleToggleRequest("hw@acme.com", "AUDITOR", "remove"))
+                .bodyValue(new RoleToggleRequest("hw2@acme.com", "AUDITOR", "remove"))
                 .exchange();
         giveAuditorRole();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list).map(AuditEventResponse::object)
-                        .anyMatch("Remove role AUDITOR from hw@acme.com"::equals), equalTo(true));
+                        .anyMatch("Remove role AUDITOR from hw2@acme.com"::equals), equalTo(true));
     }
 
     @Test
     void whenBadCredentials_LoginFailedLogged() {
         giveAuditorRole();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "usersseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "usersseruser"))
                 .exchange();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list).map(AuditEventResponse::action).anyMatch("LOGIN_FAILED"::equals), equalTo(true));
@@ -110,7 +95,7 @@ class AccountReactiveAuditIT {
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                 .exchange().expectStatus().isOk();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list).map(AuditEventResponse::action).anyMatch("DELETE_USER"::equals), equalTo(true));
@@ -125,7 +110,7 @@ class AccountReactiveAuditIT {
                 .bodyValue(new ChangepassRequest("qwertzqwertz"))
                 .exchange().expectStatus().isOk();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
@@ -140,14 +125,11 @@ class AccountReactiveAuditIT {
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
                 .exchange().expectStatus().isForbidden();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
-                        .filter(resp -> "ACCESS_DENIED".equals(resp.action())).findFirst()
-                        .orElseThrow().subject(), equalTo("admin@acme.com"))
-                .value(list -> Arrays.stream(list)
-                        .filter(resp -> "ACCESS_DENIED".equals(resp.action())).findFirst()
+                        .filter(resp -> "ACCESS_DENIED".equals(resp.action()) && "admin@acme.com".equals(resp.subject())).findFirst()
                         .orElseThrow().path(), equalTo("/api/empl/payment"));
     }
 
@@ -159,17 +141,15 @@ class AccountReactiveAuditIT {
                 .headers(headers -> headers.setBasicAuth("ad@acme.com", "12345612345678"))
                 .exchange());
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
                         .filter(resp -> "BRUTE_FORCE".equals(resp.action())).findFirst()
                         .orElseThrow().subject(), equalTo("ad@acme.com"))
                 .value(list -> Arrays.stream(list)
-                        .filter(resp -> "LOCK_USER".equals(resp.action())).findFirst()
-                        .orElseThrow().subject(), equalTo("ad@acme.com"))
-                .value(list -> Arrays.stream(list)
-                        .filter(resp -> "LOCK_USER".equals(resp.action())).findFirst()
+                        .filter(resp -> "LOCK_USER".equals(resp.action()))
+                        .filter(resp -> "ad@acme.com".equals(resp.subject())).findFirst()
                         .orElseThrow().object(), equalTo("Lock user ad@acme.com"));
     }
 
@@ -186,18 +166,20 @@ class AccountReactiveAuditIT {
                 .bodyValue(new LockUserToggleRequest("ae@acme.com", "UNlock"))
                 .exchange();
         webClient.get().uri("/api/security/events")
-                .headers(headers -> headers.setBasicAuth("hw@acme.com", "useruseruser"))
+                .headers(headers -> headers.setBasicAuth("hw2@acme.com", "useruseruser"))
                 .exchange().expectStatus().isOk()
                 .expectBody(AuditEventResponse[].class)
                 .value(list -> Arrays.stream(list)
-                        .filter(resp -> "UNLOCK_USER".equals(resp.action())).findFirst()
-                        .orElseThrow().object(), equalTo("Unlock user ae@acme.com"));
+                        .filter(resp -> "UNLOCK_USER".equals(resp.action()))
+                        .filter(resp -> "Unlock user ae@acme.com".equals(resp.object()))
+                        .findFirst()
+                        .orElseThrow(), notNullValue());
     }
 
     void giveAuditorRole() {
         webClient.put().uri("/api/admin/user/role")
                 .headers(headers -> headers.setBasicAuth("admin@acme.com", "attminattmin"))
-                .bodyValue(new RoleToggleRequest("hw@acme.com", "AUDITOR", "GRANT"))
+                .bodyValue(new RoleToggleRequest("hw2@acme.com", "AUDITOR", "GRANT"))
                 .exchange();
     }
 }

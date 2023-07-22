@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.Errors;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -55,6 +56,7 @@ public class AuthenticationHandler {
      * @param request The ServerRequest with a SignupRequest body.
      * @return a SignupResponse Json (200) as body of a ServerResponse or a 400 if validation error or user exists already
      */
+    @Transactional
     public Mono<ServerResponse> signup(ServerRequest request) {
         return request.bodyToMono(SignupRequest.class)
                 .zipWith(userRepository.count())
@@ -105,7 +107,7 @@ public class AuthenticationHandler {
      * @return a signup response mono on successful save, an error mono if user existed.
      */
     private Mono<SignupResponse> saveUser(SignupRequest signupRequest, String role) {
-        return userRepository.findByEmail(signupRequest.email())
+        return userRepository.findByEmailIgnoreCase(signupRequest.email())
                 .defaultIfEmpty(Login.unknown())
                 .flatMap(user -> {
                     if (user.isUnknown()) {
@@ -146,7 +148,7 @@ public class AuthenticationHandler {
         if (!passwordValidationError.isEmpty()) {
             return Mono.error(new ServerWebInputException(passwordValidationError));
         }
-        return userRepository.findByEmail(tuple.getT2().getName())
+        return userRepository.findByEmailIgnoreCase(tuple.getT2().getName())
                 .flatMap(user -> {
                     if (passwordEncoder.matches(newPassword, user.getPassword())) {
                         return Mono.error(new ServerWebInputException(SAME_PASSWORD_ERRORMSG));

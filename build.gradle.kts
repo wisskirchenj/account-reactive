@@ -1,15 +1,19 @@
+import org.springframework.boot.gradle.tasks.bundling.BootBuildImage
+
 plugins {
     java
-    id("org.springframework.boot") version "3.0.5"
-    id("io.spring.dependency-management") version "1.1.0"
+    id("org.springframework.boot") version "3.1.2"
+    id("io.spring.dependency-management") version "1.1.1"
+    id("org.graalvm.buildtools.native") version "0.9.23"
 }
 
 group = "de.cofinpro"
 version = "0.1-SNAPSHOT"
+val dockerHubRepo = "wisskirchenj/"
 
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(19))
+        languageVersion.set(JavaLanguageVersion.of(17))
     }
 }
 
@@ -31,11 +35,11 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
     developmentOnly("io.projectreactor:reactor-tools")
-    runtimeOnly("com.h2database:h2")
-    runtimeOnly("io.r2dbc:r2dbc-h2")
+    runtimeOnly("org.postgresql:r2dbc-postgresql:1.0.2.RELEASE")
+    runtimeOnly("org.postgresql:postgresql")
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
-
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.springframework.security:spring-security-test")
@@ -43,4 +47,10 @@ dependencies {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+tasks.named<BootBuildImage>("bootBuildImage") {
+    builder.set("dashaun/builder:tiny")
+    imageName.set(dockerHubRepo + rootProject.name + ":" + version)
+    environment.put("BP_NATIVE_IMAGE", "true")
 }

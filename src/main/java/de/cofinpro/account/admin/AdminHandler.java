@@ -10,6 +10,7 @@ import de.cofinpro.account.persistence.LoginRoleReactiveRepository;
 import de.cofinpro.account.persistence.Role;
 import de.cofinpro.account.persistence.SalaryReactiveRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -38,6 +39,7 @@ import static org.springframework.web.reactive.function.server.ServerResponse.ok
  * /api/admin/user/{role, access} (PUT).
  */
 @Service
+@DependsOn({"r2dbcScriptDatabaseInitializer"})
 public class AdminHandler {
 
     private final LoginReactiveRepository userRepository;
@@ -100,7 +102,7 @@ public class AdminHandler {
                     } else {
                         return roleRepository.deleteAllByEmail(email)
                                 .then(salaryRepository.deleteAllByEmail(email))
-                                .then(userRepository.deleteByEmail(email))
+                                .then(userRepository.deleteByEmailIgnoreCase(email))
                                 .then(principal)
                                 .flatMap(admin -> auditLogger.logDeleteUser(admin.getName(), email))
                                 .then(Mono.just(new UserDeletedResponse(email, DELETED_SUCCESSFULLY)));
@@ -207,7 +209,7 @@ public class AdminHandler {
      * @param email user email key
      */
     private Mono<SignupResponse> updatedUserResponse(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findByEmailIgnoreCase(email)
                 .flatMap(login -> Mono.just(login)
                         .zipWith(roleRepository.findRolesByEmail(login.getEmail()), Login::setRoles))
                 .map(Login::toSignupResponse);

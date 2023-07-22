@@ -5,7 +5,6 @@ import de.cofinpro.account.admin.RoleToggleRequest;
 import de.cofinpro.account.admin.UserDeletedResponse;
 import de.cofinpro.account.authentication.SignupRequest;
 import de.cofinpro.account.authentication.SignupResponse;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,16 +12,13 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 
 import static de.cofinpro.account.AccountReactiveAuthenticationIT.signup;
 import static de.cofinpro.account.configuration.AdminConfiguration.*;
 import static org.hamcrest.Matchers.*;
 
-@SpringBootTest(properties = { "spring.r2dbc.url=r2dbc:h2:file://././src/test/resources/data/admin_test_db" })
+@SpringBootTest
 @AutoConfigureWebTestClient
 class AccountReactiveAdminIT {
 
@@ -30,14 +26,6 @@ class AccountReactiveAdminIT {
 
     @Autowired
     WebTestClient webClient;
-
-    static final Path TEST_DB_PATH = Path.of("./src/test/resources/data/admin_test_db.mv.db");
-
-    @BeforeAll
-    static void dbSetup() throws IOException {
-        Files.deleteIfExists(TEST_DB_PATH);
-        Files.copy(Path.of("./src/test/resources/data/account_template.mv.db"), TEST_DB_PATH);
-    }
 
     @BeforeEach
     void setup() {

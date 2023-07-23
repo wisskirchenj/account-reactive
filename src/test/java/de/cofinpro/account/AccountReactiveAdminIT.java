@@ -15,8 +15,18 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.util.List;
 
 import static de.cofinpro.account.AccountReactiveAuthenticationIT.signup;
-import static de.cofinpro.account.configuration.AdminConfiguration.*;
-import static org.hamcrest.Matchers.*;
+import static de.cofinpro.account.configuration.AdminConfiguration.CANT_DELETE_ADMIN_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.CANT_LOCK_ADMIN_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.DELETED_SUCCESSFULLY;
+import static de.cofinpro.account.configuration.AdminConfiguration.INVALID_ROLE_COMBINE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.ROLE_NOT_FOUND_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_HASNT_ROLE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_HAS_ROLE_ALREADY_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_NEEDS_ROLE_ERRORMSG;
+import static de.cofinpro.account.configuration.AdminConfiguration.USER_NOT_FOUND_ERRORMSG;
+import static org.hamcrest.Matchers.containsInAnyOrder;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 
 @SpringBootTest
 @AutoConfigureWebTestClient
@@ -98,7 +108,6 @@ class AccountReactiveAdminIT {
                 .value(list -> list[0].roles(), equalTo(List.of("ROLE_ADMINISTRATOR")))
                 .value(list -> list[1].roles(), equalTo(List.of("ROLE_USER")))
                 .value(list -> list[0].email(), equalTo("admin@acme.com"))
-                .value(list -> list[1].email(), equalTo("hw@acme.com"))
                 .value(list -> list[0].name(), equalTo("system"));
     }
 

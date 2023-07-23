@@ -202,10 +202,11 @@ public class AccountHandler {
     /**
      * the flux of errormessage enriched SalaryRecords collected into a list is mapped to this
      * save method, who creates an error Mono iff
-     *  1.) any of the contained tuples has a non empty error message -> "save all or none" OR
-     *  2.) all entries are error-free but duplicates exist regarding the combi of employee + period.
+     * 1.) any of the contained tuples has a non empty error message -> "save all or none" OR
+     * 2.) all entries are error-free but duplicates exist regarding the combi of employee + period.
      * If this is not the case, all entries are transactionally saved to the database
-     * @return Monon with StatusResponse on saved entry count - or error message filled Mono
+     *
+     * @return Mono with StatusResponse on saved entry count - or error message filled Mono
      */
     private Mono<StatusResponse> saveSalaryRecord(List<Tuple2<SalaryRecord, String>> tuples) {
         if (tuples.stream().anyMatch(not(tuple -> tuple.getT2().isEmpty()))) {

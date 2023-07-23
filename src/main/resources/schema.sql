@@ -19,15 +19,24 @@ CREATE TABLE IF NOT EXISTS ROLES (
                       user_role VARCHAR (20) UNIQUE NOT NULL
 );
 CREATE TABLE IF NOT EXISTS LOGIN_ROLES (
-                      id BIGSERIAL PRIMARY KEY NOT NULL,
-                      email VARCHAR (64) NOT NULL,
-                      user_role VARCHAR (20) NOT NULL
+                                           id        BIGSERIAL PRIMARY KEY NOT NULL,
+                                           email     VARCHAR (64)          NOT NULL,
+                                           user_role VARCHAR(20)           NOT NULL
 );
-CREATE TABLE IF NOT EXISTS AUDIT (
-                      id BIGSERIAL PRIMARY KEY NOT NULL,
-                      date DATE NOT NULL,
-                      action VARCHAR (20) NOT NULL,
-                      subject VARCHAR (64),
-                      object VARCHAR (128),
-                      path VARCHAR (64) NOT NULL
+CREATE TABLE IF NOT EXISTS AUDIT
+(
+    id      BIGSERIAL PRIMARY KEY NOT NULL,
+    date    DATE                  NOT NULL,
+    action  VARCHAR(20)           NOT NULL,
+    subject VARCHAR(64),
+    object  VARCHAR(128),
+    path    VARCHAR(64)           NOT NULL
 );
+INSERT INTO ROLES (USER_ROLE)
+VALUES ('ROLE_ADMINISTRATOR');
+INSERT INTO ROLES (USER_ROLE)
+VALUES ('ROLE_USER');
+INSERT INTO ROLES (USER_ROLE)
+VALUES ('ROLE_ACCOUNTANT');
+INSERT INTO ROLES (USER_ROLE)
+VALUES ('ROLE_AUDITOR');

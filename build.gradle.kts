@@ -23,13 +23,6 @@ configurations {
     }
 }
 
-graalvmNative {
-    binaries.all {
-        resources.autodetect()
-    }
-    toolchainDetection = false
-}
-
 repositories {
     mavenCentral()
 }

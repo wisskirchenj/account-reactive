@@ -13,8 +13,10 @@ import de.cofinpro.account.domain.StatusResponse;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ImportRuntimeHints;
 
 @SpringBootApplication
+@ImportRuntimeHints({ResourcesRegistrar.class})
 @RegisterReflectionForBinding({SignupRequest.class,
         SignupResponse.class,
         ChangepassRequest.class,

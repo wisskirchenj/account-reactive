@@ -12,6 +12,6 @@
         <module name="account-reactive.main" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel target="19" />
+    <bytecodeTargetLevel target="17" />
   </component>
 </project>

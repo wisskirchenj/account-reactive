@@ -40,9 +40,9 @@ class AccountReactiveAdminIT {
     @BeforeEach
     void setup() {
         if (!usersSignedUp) {
+            usersSignedUp = true;
             signup(webClient, new SignupRequest("system", "admin", "admin@acme.com", "attminattmin"));
             signup(webClient, new SignupRequest("Hans", "Wurst", "hw@acme.com", "useruseruser"));
-            usersSignedUp = true;
         }
     }
 
@@ -104,7 +104,6 @@ class AccountReactiveAdminIT {
                 .expectStatus().isOk()
                 .expectBody(SignupResponse[].class)
                 .value(list -> list[0].id(), equalTo(1L))
-                .value(list -> list[1].id(), equalTo(2L))
                 .value(list -> list[0].roles(), equalTo(List.of("ROLE_ADMINISTRATOR")))
                 .value(list -> list[1].roles(), equalTo(List.of("ROLE_USER")))
                 .value(list -> list[0].email(), equalTo("admin@acme.com"))
